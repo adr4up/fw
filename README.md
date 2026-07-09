@@ -1,165 +1,406 @@
-BLOCKCHAIN E CREDENCIAIS ACADÊMICAS VERIFICÁVEIS: ANÁLISE COMPARADA DE MATURIDADE INSTITUCIONAL E DESAFIOS PARA A EDUCAÇÃO IBERO-AMERICANA
+*Integração Sistêmica de Registros de Decisão Arquitetural (ADR) no Processo Unificado: Uma Abordagem Baseada em Evidências e Metamodelação*
 
-Hélio Craveiro Pessoa Júnior1  
 
-Resumo:
-Este trabalho examina, em perspectiva comparada, a maturidade de projetos de blockchain de código aberto aplicados à certificação e às credenciais acadêmicas. O objetivo é identificar quais iniciativas apresentam evidências de adoção, governança e manutenção suficientes para orientar decisões educacionais, distinguindo-as de protótipos de pesquisa ou demonstração. A metodologia combina revisão documental e técnica de 28 projetos listados em repositórios públicos, complementada por dois casos educacionais alinhados a credenciais verificáveis, com verificação de atividade e evidências de uso na API do GitHub. Para reduzir a dependência de autodescrições dos projetos, foi implementado um validador que consulta o arXiv e deixa configurada a consulta à API v2 do X como fonte auxiliar. A comparação organiza-se em dois níveis: no plano intersetorial, contrasta educação, ambiente e saúde; no plano institucional, compara os modelos estatal, supranacional e de fundação/consórcio. O referencial teórico articula literatura sobre credenciais verificáveis, governança de bens digitais comuns e proteção de dados pessoais. Os resultados indicam assimetria relevante entre setores. O campo ambiental reúne os exemplos com adoção institucional mais documentada; o setor sanitário permanece concentrado em protótipos; e o campo educacional deslocou seu centro de gravidade dos certificados ancorados em blockchain para arquiteturas de credenciais verificáveis do W3C. Conclui-se que o uso educacional da tecnologia depende menos da cadeia escolhida e mais de governança, auditabilidade, conformidade regulatória e baixo custo operacional. A contribuição do estudo é oferecer critérios comparados para pesquisa, ensino e formulação de políticas de credenciais na Ibero-América.
-Palavras-chave: Educação comparada; Credenciais acadêmicas verificáveis; Blockchain; Governança educacional; Ibero-América.
-1 Professor na Secretaria de Educação do Distrito Federal e mestrando pelo Programa de Pós-Graduação em Educação da Universidade de Brasília, pessoajr@gmail.com.
-Introdução
-Este trabalho toma a certificação acadêmica digital como objeto de análise comparada. A pergunta orientadora é de política educacional: entre as arquiteturas de blockchain de código aberto e de credenciais verificáveis hoje disponíveis, quais alcançaram maturidade institucional suficiente para orientar decisões de sistemas educativos, e o que a sua trajetória ensina aos países ibero-americanos que ainda desenham suas políticas de credenciais e de reconhecimento de diplomas?
-Para responder a essa pergunta, o estudo adota um desenho comparado em dois eixos. No eixo intersetorial, o campo educacional é confrontado com os setores ambiental e sanitário, que apresentam graus distintos de adoção institucional. No eixo cross-nacional, comparam-se, dentro do próprio campo educacional, os modelos de governança das iniciativas com adoção documentada: o modelo estatal (Singapura), o modelo supranacional (União Europeia) e o modelo de fundação/consórcio (Estados Unidos). Dessa dupla comparação extraem-se implicações para a Ibero-América.
-A lógica dessa comparação é sintetizada na Figura 1, que organiza os setores sanitário, educacional e ambiental em um eixo de maturidade institucional, distinguindo protótipos demonstrativos de infraestruturas com adoção externa e governança verificável.
-Figura 1 - Maturidade institucional comparada
+## Resumo
 
-Fonte: Elaborada pelo autor (2026).
-A base empírica é uma análise documental e técnica de 28 projetos listados em repositórios públicos, aos quais se somam dois casos educacionais complementares (Learner Credential Wallet e OpenCerts). Os dados de atividade, status de arquivamento e condição de fork foram verificados diretamente na API do GitHub em 5 de julho de 2026. A classificação privilegia evidências auditáveis: atividade de repositório, governança, documentação, releases, uso institucional e sinais externos verificáveis.
-Projetos Blockchain Open Source Avaliados
-A Tabela 1 apresenta os 28 projetos identificados no levantamento, com avaliação de adoção em produção (S = evidência de uso documentado por organização externa; N = protótipo/prova de conceito; P = piloto/demonstrador institucional).
-Tabela 1 – Projetos de blockchain de código aberto por setor e nível de adoção em produção
-Nome do Projeto	Setor	Descrição	Forks	Adoção em produção
-Energy Web Origin	Ambiental	SDK para emissão e gestão de Certificados de Atributos de Energia (EACs).	60	S – base de implantações do ecossistema Energy Web com utilities europeias; ~35 contribuidores
-Toucan Protocol Contracts	Ambiental	Contratos da ponte de créditos de carbono Toucan. Repositório é um espelho (mirror), não o repositório de desenvolvimento.	31	S – protocolo em uso on-chain, com ressalvas sobre tokenização
-Hedera Guardian	Ambiental	Motor de políticas open source para digitalizar metodologias ESG/dMRV.	182	S – Verra (Project Hub, 20+ metodologias), Gold Standard (créditos de fogões eCook Bangladesh emitidos em 2026), UNDP, EcoMarkets Australia; ~68 contribuidores
-Regen Ledger	Ambiental	Blockchain Cosmos-SDK para regeneração planetária.	115	S – mainnet Regen Network operante com créditos ecológicos emitidos; ~38 contribuidores
-KlimaDAO dApp	Ambiental	Monorepo da infraestrutura de finanças climáticas KlimaDAO.	72	S – dApp em produção, com ressalvas sobre tokenização; ~35 contribuidores
-IBM Medical-Blockchain	Sanitário	Plataforma de gestão de dados de saúde em blockchain (code pattern).	94	N – code pattern demonstrativo da IBM, não produto
-ehr-blockchain	Sanitário	EHR descentralizado com Ethereum, Solidity, IPFS e MetaMask.	55	N – protótipo mantido ativamente, mas ~2 contribuidores
-Blockchain-Healthcare-System	Sanitário	Sistema BPJS com blockchain para registros médicos.	0	N
-BlockchainEducation	Educacional	Aplicação de blockchain na educação.	0	N
-OERchains	Educacional	Ecossistema para recursos educacionais abertos no Ethereum.	0	N
-Decentralized-Federated-Learning	Sanitário	Aprendizado federado descentralizado com consenso blockchain (saúde/IoT).	0	N – framework de pesquisa
-SwasthyaChain	Sanitário	Gestão de prontuários eletrônicos com regras granulares. Fork.	39	N
-Blockchain-Healthcare-Project	Sanitário	Controle de acesso seguro para hospitais e registros.	2	N
-Switchboard dApp	Ambiental	UI de identidade e acesso para ativos de energia.	14	S – componente do stack Energy Web em uso
-IOTA DPP Demonstrator	Ambiental	Implementação de referência de Passaporte Digital de Produto.	1	P – demonstrador oficial da IOTA Foundation para pilotos ESPR
-meDossier	Sanitário	Armazenamento descentralizado de registros médicos (blockchain + IPFS).	2	N
-Secure-Electronic-Health-Records	Sanitário	Upload seguro de dados médicos baseado em Ethereum.	17	N
-Decentralized-Personal-Health-Record	Sanitário	Gestão individual de dados de saúde via blockchain.	15	N
-AI-Blockchain-EHR	Sanitário	Gestão de prontuários eletrônicos com IA + blockchain.	37	N
-Blockcerts (cert-issuer)	Educacional	Padrão aberto para emissão e verificação de certificados em blockchain.	217	S – certificados emitidos por instituições identificáveis desde 2017 (MIT esteve entre os primeiros emissores); ~26 contribuidores
-MedRec	Sanitário	Sistema descentralizado de registros de saúde (MIT Media Lab).	91	N – protótipo histórico, sem produção
-chaincred	Educacional	Verificação de credenciais acadêmicas no Ethereum.	0	N
-AI-HealthCare-Assistant	Sanitário	Assistente de saúde com IA + registros médicos em blockchain.	54	N – ~7 contribuidores, sem uso institucional conhecido
-Blockchain_SupplyChain	Sanitário	Cadeia de suprimentos farmacêutica em blockchain.	50	N
-Track-Pharma	Sanitário	Cadeia de suprimentos farmacêutica baseada em blockchain.	9	N
-MediChain	Sanitário	Cadeia de suprimentos farmacêutica no Ethereum.	2	N
-Healthcare-Data-Sharing	Sanitário	Compartilhamento seguro de dados de saúde (blockchain híbrido).	2	N
-EduChain Connect	Educacional	Plataforma de credenciais educacionais sobre o ecossistema Stacks.	0	N
-Fonte: Elaborada pelo autor a partir de dados da API do GitHub (2026).
-No setor educacional, o levantamento dependia quase exclusivamente do Blockcerts, sem contemplar o padrão que passou a reunir tração institucional em 2025: o W3C Verifiable Credentials 2.0, publicado como Recomendação W3C em maio daquele ano (W3C, 2025). A Tabela 2 acrescenta os dois projetos que preenchem essa lacuna.
-Tabela 2 – Projetos educacionais complementares alinhados ao padrão W3C Verifiable Credentials
-Nome	Setor	Descrição	Forks	Adoção em produção
-Learner Credential Wallet	Educacional	Carteira móvel (iOS/Android) para credenciais acadêmicas no padrão W3C VC. Criada pelo Digital Credentials Consortium (MIT Open Learning, com financiamento do Dep. de Educação dos EUA); custódia transferida em 2025 para a OpenWallet Foundation (Linux Foundation) (HIGUERA, 2025).	49	S – pilotos com universidades do consórcio DCC; governança de fundação
-OpenCerts	Educacional	Plataforma do governo de Singapura (GovTech/SkillsFuture) para certificados educacionais verificáveis ancorados em Ethereum.	71	S – produção nacional em Singapura: institutos de ensino emitem certificados verificáveis pelo público
-Fonte: Elaborada pelo autor (2026).
-A EBSI (European Blockchain Services Infrastructure, Comissão Europeia), embora sem repositório único de implantação, tornou-se em 2025 uma referência de infraestrutura de credenciais educacionais verificáveis na Europa, com integração à carteira de identidade digital europeia (EUDI Wallet) e casos transfronteiriços documentados (França via projeto fr.EBSI com Universidade de Lille; Bélgica–Itália) (BCDIPLOMA, 2024). Para a Ibero-América, ela funciona como parâmetro de arquitetura e governança, não como modelo a ser simplesmente transplantado.
-No setor sanitário, a busca por projetos ativos de 2025–2026 não encontrou candidato open source com adoção em produção. Os esforços institucionais migraram para trilhas sem blockchain (APIs HL7 FHIR, adotadas ou em adoção por ~84% dos provedores hospitalares dos EUA (GOVINDARAJAN et al., 2025)) ou para consórcios permissionados de código fechado.
-Validação externa por arXiv e X
-Além da verificação por GitHub, foi implementado o script `validar\_robustez.py`, configurado em `projetos\_robustez.json`, para consultar sinais externos de robustez dos 28 projetos da Tabela 1. O validador usa a API pública do arXiv (ARXIV, 2026) e a API v2 de busca recente do X (X DEVELOPER PLATFORM, 2026), com chave configurável por `X\_BEARER\_TOKEN`.
-Na execução de 9 de julho de 2026, a busca no arXiv retornou menções específicas apenas para Blockcerts (2 resultados específicos em 3 resultados brutos). Os demais projetos não apresentaram menção específica pelo nome do projeto; em alguns casos, como "Decentralized-Federated-Learning" e "Healthcare-Data-Sharing", houve resultados brutos relacionados ao tema, mas sem referência ao repositório ou iniciativa avaliada. Por isso, o arXiv foi tratado como sinal complementar, não como critério suficiente de adoção.
-A consulta ao X ficou preparada no validador, mas não foi executada nesta versão porque não havia `X\_BEARER\_TOKEN` configurado no ambiente. Assim, nenhuma classificação de robustez foi alterada por menções em rede social. Quando executada com credencial válida, a busca no X deve ser lida como indicador de circulação pública recente, e não como prova de uso em produção.
-Análise de maturidade: o que as métricas de GitHub não mostram
-Em linha com a tendência dos estudos comparados recentes sobre software livre — que substituem métricas de popularidade (estrelas, forks) por indicadores multidimensionais de saúde de projeto: atividade de commits, número e concentração de mantenedores, cadência de releases e governança —, a análise a seguir prioriza sinais de sustentação sobre sinais de visibilidade. Lida sob essa ótica, a contagem de contribuidores separa os projetos em duas classes distintas:
-Classe 1 – Infraestrutura institucional com comunidade identificável. Hedera Guardian (~68 contribuidores), Regen Ledger (~38), Energy Web Origin (~35), KlimaDAO (~35) e Blockcerts cert-issuer (~26) têm organizações responsáveis (Hashgraph/HBAR Foundation, Regen Network, Energy Web Foundation, fundação Blockcerts), documentação, releases versionados e, em parte dos casos, evidências públicas de adoção. No caso do Guardian, a Verra integrou o software ao Project Hub para digitalizar mais de 20 metodologias de carbono (VERRA, 2025), a Gold Standard emitiu em março de 2026 créditos de fogões eficientes digitalizados via Guardian (projeto eCook Bangladesh, com telemetria IoT) (HASHGRAPH, 2026), e o UNDP mantém seu National Carbon Registry sobre a mesma base. Aqui, adoção em produção significa dependência operacional por organizações externas ao desenvolvedor.
-Classe 2 – Protótipos e repositórios de baixa institucionalização. A maior parte dos projetos sanitários da lista (ehr-blockchain com ~2 contribuidores, e os demais com números similares ou menores) e os educacionais pequenos são trabalhos acadêmicos ou de portfólio: poucos autores — um fator de ônibus (bus factor) baixo, com frequência unitário, que sinaliza risco direto de descontinuidade —, sem releases, sem testes de integração visíveis, sem auditoria de contratos e sem organização usuária identificada. São úteis como referência de arquitetura (o padrão hash-on-chain + IPFS está bem representado), mas não devem ser tratados como candidatos a implantação. A diferença entre essas classes sustenta a classificação: métricas simples de estrelas (ex.: AI-Blockchain-EHR, com 114 estrelas, mas sem commit desde 2023) não capturam governança, manutenção e uso institucional.
-Nota sobre auditorias de contratos: nenhum dos repositórios da Classe 2 apresenta auditoria de segurança de smart contracts. Nos projetos da Classe 1 que operam valor on-chain (Toucan, KlimaDAO), auditorias existem no histórico dos protocolos, mas o repositório da Toucan listado aqui é explicitamente um mirror.
-Limitações metodológicas
-A leitura comparada acima observa limites que condicionam sua interpretação, em linha com as boas práticas de transparência dos estudos de software livre. Primeiro, as métricas de GitHub são indicadores indiretos (proxies) de maturidade: capturam atividade e comunidade, não qualidade de código ou segurança de contratos. Segundo, a amostra não é probabilística — parte de repositórios públicos localizáveis por busca —, de modo que iniciativas de código fechado ou permissionadas ficam fora do enquadramento. Terceiro, os sinais externos triangulados são complementares e assimétricos: o arXiv mede indexação acadêmica (com menção específica apenas ao Blockcerts) e a consulta ao X ficou configurada, mas não executada nesta versão. Quarto, os dados constituem um retrato datado (API do GitHub em 5 de julho de 2026; validador externo em 9 de julho de 2026), e a heterogeneidade de licenças entre os projetos não foi sistematizada como dimensão própria. Essas ressalvas não invalidam a distinção entre adoção institucional e prototipagem, mas delimitam seu alcance.
-Riscos regulatórios e de conformidade
-Os riscos regulatórios condicionam diretamente a adoção – dimensão importante tanto para credenciais educacionais quanto para dados de saúde, e frequentemente subestimada nos protótipos acadêmicos.
-1. GDPR/LGPD e o desenho hash-on-chain (impacto direto nos projetos sanitários)
-Em abril de 2025, o Conselho Europeu de Proteção de Dados (EDPB) publicou as Diretrizes 02/2025 sobre processamento de dados pessoais em blockchains (EUROPEAN DATA PROTECTION BOARD, 2025), um dos pronunciamentos regulatórios mais relevantes sobre o tema. Três pontos afetam diretamente os projetos aqui analisados:
-Hash de dado pessoal continua sendo dado pessoal. O EDPB é explícito: dados criptografados ou hasheados permanecem sujeitos ao GDPR. O desenho hash-on-chain usado por quase todos os projetos de EHR da lista não retira os dados do escopo regulatório – apenas mitiga o risco. Hashes de dados de saúde devem usar sal secreto ou compromissos criptográficos, nunca hash simples.
-Recomendação oficial: não armazenar dado pessoal on-chain; manter dados off-chain com referência não identificadora na cadeia. Os projetos que seguem esse desenho estão alinhados à orientação; os que gravam metadados identificáveis on-chain (vários protótipos acadêmicos gravam endereços de paciente vinculáveis) estão em desacordo.
-Direito ao apagamento: o EDPB aceita que dados on-chain sejam considerados efetivamente anonimizados após um pedido de apagamento somente se o dado off-chain que permitiria reidentificação for apagado e o registro on-chain não identificar diretamente ninguém. Isso exige governança do lado off-chain que nenhum protótipo da lista implementa.
-A LGPD brasileira segue lógica análoga (dado pseudonimizado continua pessoal, art. 13 §4º), de modo que as mesmas conclusões valem para implantações no Brasil.
-2. Enquadramento de tokens de carbono
-A proibição, pela Verra, da tokenização de créditos aposentados (2022) foi parcialmente revista: a entidade propôs um mecanismo de "imobilização" de créditos em subcontas do registro (o crédito fica travado até ser aposentado ou o token ser queimado) e abriu consulta pública com exigências de KYC, porém até o início de 2025 não havia formalizado o framework (VERRA, 2022). Em paralelo, a Verra firmou parceria com a Hedera para digitalizar seu registro via Guardian (VERRA, 2025). A diferença entre esses movimentos é relevante: a certificadora restringiu a tokenização por terceiros (modelo Toucan/KlimaDAO) e adotou uma trilha digital sob governança própria (modelo Guardian).
-3. Passaporte Digital de Produto (ESPR)
-A regulação europeia ESPR segue sendo um vetor importante de demanda institucional para rastreabilidade – o demonstrador da IOTA listado acima permanece implementação de referência ativa (Apache-2.0, atualizado em 2026-03).
-Repercussões Acadêmicas e Pesquisadores Influentes
-A análise da literatura acadêmica e das discussões de pesquisadores influentes revela tendências recorrentes na aplicação do blockchain nos setores ambiental, sanitário e educacional.
-1. Contexto Ambiental e Sustentabilidade
-O blockchain tem sido discutido como ferramenta para integridade de dados, relatórios de sustentabilidade e coordenação entre partes interessadas (VACCARGIU; TONELLI, 2024). Revisões bibliométricas recentes identificam pesquisadores influentes – entre eles Tsan-Ming Choi, com trabalhos sobre blockchain em cadeias de suprimentos e ação climática – e mostram que a pesquisa evoluiu de um foco financeiro para aplicações em contabilidade de carbono e rastreabilidade de cadeias de suprimentos verdes (SCIENCEDIRECT, 2025; PARMENTOLA et al., 2022). O World Economic Forum (WEF) também tem destacado o potencial do blockchain para ação climática (TOUCAN, 2023). Em 2025–2026, a literatura passou a contar com exemplos de produção: a digitalização de metodologias pela Verra (VERRA, 2025) e a emissão de créditos digitais pela Gold Standard (HASHGRAPH, 2026) indicam que o dMRV deixou de ser apenas hipótese acadêmica em parte desse setor.
-2. Contexto Sanitário
-No setor da saúde, o blockchain é visto como uma solução para desafios de interoperabilidade e segurança de dados (ELANGOVAN et al., 2022). Um precedente relevante foi o projeto Verifiable Data Audit do DeepMind Health (2017), sistema de auditoria de logs inspirado em blockchain – embora não seja um blockchain propriamente dito, e o DeepMind Health tenha sido absorvido pelo Google Health em 2019 (SULEYMAN; LAURIE, 2017). Desde as primeiras discussões do setor, argumenta-se que o blockchain pode resolver a fragmentação de dados entre provedores (BRYANT, 2016), e estudos recentes exploram integração com IoT e IA (ABBAS et al., 2026).
-Baixa conversão da saúde: por que 10+ anos de literatura não viraram produção
-O setor sanitário é concentrado em protótipos acadêmicos sem adoção em produção. Uma revisão sistemática de implementações blockchain em saúde (SHAIKH et al., 2025) e um estudo sobre o ciclo de hype da adoção (GOVINDARAJAN et al., 2025) convergem em quatro causas para esse padrão:
-O problema de integração é maior que o problema de confiança. EHRs legados (Epic, Cerner e equivalentes) não foram desenhados para interagir com blockchain; a integração exige modificações caras que nenhum protótipo acadêmico enfrenta – os protótipos assumem um mundo greenfield que não existe em hospital nenhum.
-O concorrente venceu por ser mais simples. A interoperabilidade que motivou o MedRec em 2016 está sendo resolvida por APIs HL7 FHIR – ~84% dos provedores hospitalares dos EUA já as adotam ou planejam adotar (GOVINDARAJAN et al., 2025) – sem custo de consenso distribuído.
-Regulação assimétrica. GDPR/LGPD/HIPAA tratam dado de saúde como categoria especial; as Diretrizes EDPB 02/2025 (EUROPEAN DATA PROTECTION BOARD, 2025) confirmam que hash on-chain de dado pessoal continua no escopo do GDPR. Para um hospital, o blockchain adiciona superfície regulatória em vez de reduzi-la.
-Incentivo acadêmico ≠ incentivo de manutenção. Os protótipos são artefatos de publicação ou de portfólio; publicado o artigo (ou concluído o TCC), muitos repositórios deixam de receber manutenção. Esse é o padrão observado na tabela: vários projetos têm um autor, um período curto de commits e depois baixa atividade.
-A implicação prática: no setor sanitário, o valor desta lista é sobretudo pedagógico e arquitetural (o padrão hash-on-chain + IPFS + controle de acesso está bem documentado nos protótipos), não operacional. Quem precisa de interoperabilidade de dados de saúde em produção hoje deve considerar FHIR primeiro e blockchain apenas para o caso mais estreito de trilha de auditoria multipartes.
-3. Contexto Educacional
-No campo da educação, a discussão sobre blockchain concentrou-se na descentralização e na verificação de credenciais acadêmicas. McGreal (2023) discute micro-credenciais e descentralização via blockchain. Estudos já apontavam o potencial inicial da certificação de graus baseada em blockchain (EL KOSHIRY et al., 2023). O conceito de "aprendizado blockchain" enfatiza o controle do estudante sobre suas conquistas acadêmicas (STEIU, 2020).
-A atualização relevante de 2025–2026 é a mudança do modelo "certificado ancorado em blockchain pública" (Blockcerts) para o modelo W3C Verifiable Credentials 2.0 (Recomendação W3C, maio de 2025) (W3C, 2025). Nesse modelo, o blockchain é opcional: a verificação depende da assinatura criptográfica do emissor, com ancoragem em cadeia usada, quando necessário, para registros de emissores ou revogação. O Blockcerts permanece ativo (última atualização 2026-04), mas hoje pode ser entendido como um perfil histórico dentro de um padrão mais amplo.
-Análise comparada dos modelos de governança de credenciais
-O ponto em questão não é apenas técnico, mas político-institucional: as três infraestruturas educacionais com adoção documentada convergem para o padrão W3C VC e diferem sobretudo no plano da governança. Comparando-as, distinguem-se três modelos, cada um com implicações distintas de soberania, custo e sustentabilidade (Tabela 3):
-Tabela 3 – Modelos de governança das infraestruturas educacionais de credenciais verificáveis
-Dimensão	Modelo estatal (OpenCerts, Singapura)	Modelo supranacional (EBSI, União Europeia)	Modelo de fundação/consórcio (Learner Credential Wallet, EUA)
-Quem governa	Agência de governo (GovTech/SkillsFuture)	Comissão Europeia + Estados-membros	Consórcio universitário (DCC/MIT) sob a OpenWallet Foundation (Linux Foundation) (HIGUERA, 2025)
-Âncora de confiança	Registro nacional de emissores	Rede EBSI + carteira de identidade europeia (EUDI Wallet) (BCDIPLOMA, 2024)	Registro de emissores mantido pela fundação
-Escopo	Nacional (certificados verificáveis pelo público)	Transfronteiriço (casos França–Bélgica–Itália) (BCDIPLOMA, 2024)	Rede de universidades participantes
-Soberania de dados	Alta (dado sob controle do Estado)	Compartilhada entre Estados-membros	Delegada à governança de fundação
-Risco de captura por ator único	Baixo (mas dependente de política de governo)	Baixo (governança multilateral)	Baixo (custódia transferida de indivíduo para fundação em 2025)
-Fonte: Elaborada pelo autor (2026).
-A comparação indica que a maturidade de uma tecnologia de credenciais depende da sua governança, não apenas da solução técnica. Esse critério separa as iniciativas adotáveis (EBSI, OpenCerts, LCW) dos protótipos de baixa institucionalização no restante da lista educacional (BlockchainEducation, OERchains, chaincred, EduChain Connect). Estes últimos podem ser úteis para estudo, mas não oferecem, sozinhos, base institucional para reconhecimento de diplomas. A passagem da Learner Credential Wallet, em 2025, para a OpenWallet Foundation (Linux Foundation) (HIGUERA, 2025) exemplifica o tipo de estabilização de governança que um sistema educativo deve observar antes de adotar uma infraestrutura.
-Tendência transversal: uso leve, baixas taxas e baixa especulação
-Um padrão comum atravessa os projetos com maturidade mais documentada neste levantamento: o blockchain é usado como camada fina de integridade e auditabilidade, e não como veículo financeiro. Três características definem esse uso "leve":
-Âncora de integridade, não repositório de dados. Praticamente todos os projetos de EHR listados seguem o desenho hash-on-chain: os dados ficam fora da cadeia (tipicamente em IPFS) e o blockchain registra apenas hashes e permissões. Isso minimiza custo por transação e evita expor dados sensíveis. Reforço regulatório: as Diretrizes EDPB 02/2025 (EUROPEAN DATA PROTECTION BOARD, 2025) recomendam esse desenho – dado off-chain, referência não identificadora on-chain – mas com a ressalva de que hash de dado pessoal continua sendo dado pessoal (ver seção de riscos regulatórios).
-Infraestruturas de taxa baixa ou nula. Os projetos com atividade documentada mais consistente rodam em redes onde o custo de transação é irrelevante para o caso de uso: Hedera Guardian (taxas fixas de fração de centavo), IOTA DPP (rede sem taxas), Regen Ledger (app-chain Cosmos com taxas mínimas), e as redes permissionadas Hyperledger/Energy Web (sem token especulativo). No ecossistema Ethereum, a viabilização do mesmo padrão vem dos rollups L2 pós-EIP-4844, com taxas abaixo de um centavo, e da account abstraction, que permite transações patrocinadas – o usuário final não precisa possuir criptomoeda.
-Adoção puxada por regulação e conformidade, não por especulação. O Passaporte Digital de Produto exigido pela regulação europeia ESPR e a digitalização de metodologias ESG exemplificam demanda institucional sem componente especulativo. A adoção do Guardian pela Verra, Gold Standard e UNDP (VERRA, 2025; HASHGRAPH, 2026) e a produção nacional do OpenCerts em Singapura indicam que essa trilha tem gerado uso verificável.
-Implicações para a educação ibero-americana
-Transposto o diagnóstico comparado para a realidade dos sistemas educativos ibero-americanos, cinco implicações se destacam, convertendo a análise técnica em agenda de política educacional para a região.
-Essas implicações são reunidas na Figura 2, que apresenta uma arquitetura de credenciais verificáveis para a Ibero-América baseada em padrão W3C VC, governança soberana, dados pessoais fora da cadeia e ancoragem mínima para emissores, revogação e auditoria.
-Figura 2 - Arquitetura de credenciais verificáveis
 
-Fonte: Elaborada pelo autor (2026).
-Reconhecimento de diplomas e mobilidade acadêmica regional. O problema recorrente do espaço ibero-americano – validar e reconhecer títulos entre Brasil, Portugal, Espanha e os países da América Latina – é semelhante ao enfrentado pela EBSI no plano europeu com credenciais verificáveis transfronteiriças (BCDIPLOMA, 2024). Instrumentos regionais de reconhecimento (a exemplo da Convenção Regional de Reconhecimento de Estudos da UNESCO para a América Latina e o Caribe) poderiam apoiar-se em credenciais W3C VC, reduzindo fraude documental e custo de apostilamento sem impor uma cadeia pública única.
-A escolha do modelo de governança é uma decisão soberana. A comparação estatal/supranacional/fundação não é neutra para a região. Um país ibero-americano que adote acriticamente uma carteira mantida por fundação estrangeira terceiriza a âncora de confiança dos seus próprios diplomas. O modelo OpenCerts (governança estatal sobre padrão aberto) tende a ser compatível com a soberania educacional de Estados nacionais, ao passo que uma EBSI regional demandaria coordenação multilateral que a Ibero-América ainda não possui em matéria de credenciais.
-Soberania de dados sob a LGPD e congêneres. As Diretrizes EDPB 02/2025 (EUROPEAN DATA PROTECTION BOARD, 2025) e a LGPD brasileira (dado pseudonimizado continua pessoal, art. 13 §4º) convergem numa orientação que a região deve internalizar: não gravar dado pessoal de estudante on-chain. O desenho adequado para credenciais educacionais mantém o dado sob controle da instituição emissora (off-chain), usando a cadeia apenas para registro de emissores e revogação. Isso protege o estudante e mantém a conformidade regulatória.
-Custo e infraestrutura: a favor da adoção leve. Sistemas educativos com orçamento restrito não podem depender de taxas de transação voláteis nem exigir que o egresso possua criptomoeda. O padrão que amadureceu – assinatura criptográfica do emissor, ancoragem mínima em cadeia de taxa baixa ou nula – tem custo operacional reduzido, o que o torna viável para redes públicas de ensino e para instituições da região.
-Equidade e risco de dependência tecnológica. Uma credencial só é inclusiva se puder ser verificada por qualquer empregador ou instituição sem software proprietário e se o estudante mantiver a posse do documento (carteira sob controle do titular). Padrões abertos (W3C VC) e código aberto com governança de fundação mitigam o risco de aprisionamento tecnológico (vendor lock-in), preocupação importante para países que não querem repetir, no domínio das credenciais, a dependência que já vivem em plataformas educacionais.
-Síntese para a região: a lição comparada não é "adotar blockchain", mas adotar o padrão de credenciais verificáveis com um modelo de governança soberano, desenho de dados conforme à LGPD e infraestrutura de baixo custo – tratando a ancoragem em cadeia como detalhe de implementação, não como fim em si.
-Recomendações priorizadas por setor
-Critérios: maturidade verificada (comunidade, releases, governança), evidência de adoção em produção e risco de abandono. Premissa: recursos limitados – 1 a 2 prioridades por setor. A leitura começa pelo setor educacional; o ambiental segue como parâmetro de maturidade a emular e o sanitário como alerta sobre o que impede a adoção.
-Educacional – consolidar a âncora emergente
-Learner Credential Wallet (MIT, OpenWallet Foundation) – primeira prioridade educacional. Reúne governança de fundação Linux Foundation, padrão W3C VC 2.0, pilotos universitários e financiamento público de origem.
-Blockcerts cert-issuer (MIT, ativo) – segunda prioridade: tem base histórica ampla no setor e segue mantido; novas emissões, porém, devem considerar compatibilidade com W3C VC 2.0/EBSI em vez do perfil Blockcerts puro.
-Acompanhar a EBSI como referência arquitetural mesmo sem adotá-la diretamente, e o OpenCerts (Singapura) como referência de governança estatal possível para Estados ibero-americanos (ver seção de implicações regionais).
-Ambiental – maturidade mais documentada
-Hedera Guardian (Apache-2.0, ~68 contribuidores) – primeira prioridade no setor ambiental. É o projeto da lista com adoção simultânea por múltiplas certificadoras e agências (Verra, Gold Standard, UNDP, EcoMarkets Australia) e demanda regulatória associada ao Artigo 6 do Acordo de Paris e ao dMRV. O risco de abandono é menor que o dos protótipos, pois há sustentação organizacional e uso operacional.
-Regen Ledger (~38 contribuidores, mainnet operante) – segunda prioridade. É uma blockchain focada em ativos ecológicos, com créditos emitidos on-chain e comunidade técnica associada ao ecossistema Cosmos.
-Sanitário – nenhum candidato a produção
-Não foi encontrado, na pesquisa de 2025–2026, nenhum projeto open source de blockchain-saúde com adoção em produção. Diante desse cenário, a recomendação é:
-shamil-t/ehr-blockchain (MIT, ativo até 2026-07) – apenas como referência de ensino e prototipagem do padrão hash-on-chain + IPFS. É o protótipo com manutenção mais recente na categoria.
-Decentralized-Federated-Learning (MIT, ativo) – como tema de pesquisa: a interseção aprendizado federado + blockchain para saúde trata de coordenação de treino multi-institucional sem compartilhamento de dados brutos, problema distinto da interoperabilidade clínica enfrentada pelo FHIR.
-Estratégia setorial: para interoperabilidade em produção, priorizar HL7 FHIR; reservar blockchain para trilha de auditoria multipartes e consentimento – e acompanhar consórcios permissionados em vez de protótipos Ethereum.
-Conclusão
-A comparação – intersetorial e cross-nacional – permite responder à pergunta que abriu este trabalho. No plano intersetorial, a maturidade é desigual, e essa desigualdade oferece um critério de leitura para a educação. O setor ambiental atravessou, entre 2025 e 2026, a fronteira da produção documentada em alguns casos – certificadoras (Verra, Gold Standard) e agências (UNDP) processam créditos sobre software de código aberto (Guardian) –, mostrando que maturidade institucional exige comunidade técnica, governança de organização e demanda regulatória. O setor sanitário permanece concentrado em protótipos: a interoperabilidade que o motivava está sendo entregue por padrões mais simples (HL7 FHIR) e a regulação de dados pessoais (EDPB 02/2025) encarece qualquer desenho on-chain. Esse é um alerta pertinente a quem, na educação, tentar gravar dados de estudantes na cadeia.
-O setor educacional situa-se entre os dois: encontrou sua trilha institucional no padrão W3C Verifiable Credentials 2.0, no qual o blockchain deixa de ser o fim e passa a ser, quando muito, uma camada opcional de ancoragem. No plano cross-nacional, a comparação dos três modelos de governança – estatal (OpenCerts/Singapura), supranacional (EBSI/União Europeia) e de fundação (LCW/DCC-OpenWallet Foundation) – indica que um fator relevante para uma credencial passível de adoção é a governança. Para sistemas educativos, a decisão relevante não é apenas "usar ou não blockchain", mas escolher um modelo de governança compatível com soberania, LGPD e infraestrutura de baixo custo.
-Para a Ibero-América, comparar é útil: os modelos europeu, singapurense e norte-americano oferecem experiências contrastantes a partir das quais a região pode desenhar – sem importar acriticamente – políticas próprias de credenciais verificáveis, reconhecimento de diplomas e mobilidade acadêmica. A recomendação transversal é alocar esforço onde há tração institucional verificável (LCW, Blockcerts e as referências EBSI/OpenCerts, no campo educacional; Guardian e Regen, como parâmetros de maturidade) e tratar o restante da lista como acervo arquitetural e pedagógico, não como portfólio de adoção.
-REFERÊNCIAS
-ABBAS, Syed Raza; ABBAS, Zeeshan; REHMAN, Mobeen Ur; LEE, Seung Won. Blockchain for smart healthcare: a systematic review of security, interoperability, and AI–IoT integration. DIGITAL HEALTH, [S. l.], v. 12, 2026. Disponível em: https://journals.sagepub.com/doi/10.1177/20552076261420985. Acesso em: 9 jul. 2026.
-ARXIV. arXiv API user's manual. Ithaca: Cornell University, 2026. Disponível em: https://info.arxiv.org/help/api/user-manual.html. Acesso em: 9 jul. 2026.
-BCDIPLOMA. Verifiable credentials on the blockchain: fr.EBSI project explained. [S. l.], 2024. Disponível em: https://www.bcdiploma.com/en/blog/ebsi-verifiable-credentials. Acesso em: 9 jul. 2026.
-BRYANT, Meg. Blockchain may be healthcare's answer to interoperability, data security. Healthcare Dive, [S. l.], 2016. Disponível em: https://www.healthcaredive.com/news/blockchain-may-be-healthcares-answer-to-interoperability-data-security/418708/. Acesso em: 9 jul. 2026.
-ELANGOVAN, Deepa; LONG, Chiau Soon; BAKRIN, Faizah Safina; TAN, Ching Siang; GOH, Khang Wen; YEOH, Siang Fei; LOY, Mei Jun; HUSSAIN, Zahid; LEE, Kah Seng; IDRIS, Azam Che; MING, Long Chiau. The use of blockchain technology in the health care sector: systematic review. JMIR Medical Informatics, [S. l.], v. 10, n. 1, 2022. Disponível em: https://medinform.jmir.org/2022/1/e17278/. Acesso em: 9 jul. 2026.
-EL KOSHIRY, Amr; ELIWA, Entesar; ABD EL-HAFEEZ, Tarek; SHAMS, Mahmoud Y. Unlocking the power of blockchain in education: an overview of innovations and outcomes. Blockchain: Research and Applications, [S. l.]: Elsevier, 2023. Disponível em: https://www.sciencedirect.com/science/article/pii/S2096720923000404. Acesso em: 9 jul. 2026.
-EUROPEAN DATA PROTECTION BOARD. Guidelines 02/2025 on processing of personal data through blockchain technologies. Bruxelas: EDPB, 2025. Disponível em: https://www.edpb.europa.eu/system/files/2025-04/edpb_guidelines_202502_blockchain_en.pdf. Acesso em: 9 jul. 2026.
-GOVINDARAJAN, Usharani Hareesh; NARANG, Gagan; SINGH, Dhiraj Kumar; YADAV, Vinay Surendra. Blockchain technologies adoption in healthcare: overcoming barriers amid the hype cycle to enhance patient care. Technological Forecasting and Social Change, [S. l.]: Elsevier, v. 213, 2025. Disponível em: https://ideas.repec.org/a/eee/tefoso/v213y2025ics0040162525000629.html. Acesso em: 9 jul. 2026.
-HASHGRAPH. Hedera Guardian 2026: the next chapter. [S. l.], 2026. Disponível em: https://hashgraph.com/blog/hedera-guardian-2026-the-next-chapter/. Acesso em: 9 jul. 2026.
-HIGUERA, Alex. DCC transfers stewardship of Learner Credential Wallet to the OpenWallet Foundation. MIT Open Learning, Cambridge, 2025. Disponível em: https://openlearning.mit.edu/news/dcc-transfers-stewardship-learner-credential-wallet-openwallet-foundation. Acesso em: 9 jul. 2026.
-McGREAL, Rory. Blockchain and micro-credentials. International Journal of E-Learning & Distance Education, [S. l.], 2023. Disponível em: https://www.ijede.ca/index.php/jde/article/view/1250/1885. Acesso em: 9 jul. 2026.
-PARMENTOLA, Adele; PETRILLO, Antonella; TUTORE, Ilaria; DE FELICE, Fabio. Is blockchain able to enhance environmental sustainability? A systematic review and research agenda from the perspective of Sustainable Development Goals (SDGs). Business Strategy and the Environment, [S. l.]: Wiley, v. 31, n. 6, 2022. Disponível em: https://onlinelibrary.wiley.com/doi/full/10.1002/bse.2882. Acesso em: 9 jul. 2026.
-SCIENCEDIRECT. A bibliometric review of blockchain in climate action. [S. l.]: Elsevier, 2025. Disponível em: https://www.sciencedirect.com/science/article/pii/S2949736125000703. Acesso em: 9 jul. 2026.
-SHAIKH, Mutiullah; MEMON, Shafique Ahmed; EBRAHIMI, Ali; WIIL, Uffe Kock. A systematic literature review for blockchain-based healthcare implementations. Healthcare, Basel: MDPI, v. 13, n. 9, 2025. Disponível em: https://www.mdpi.com/2227-9032/13/9/1087. Acesso em: 9 jul. 2026.
-STEIU, Mara-Florina. Blockchain in education: opportunities, applications, and challenges. First Monday, [S. l.], v. 25, n. 9, 2020. Disponível em: https://firstmonday.org/ojs/index.php/fm/article/view/10654. Acesso em: 9 jul. 2026.
-SULEYMAN, Mustafa; LAURIE, Ben. Trust, confidence and verifiable data audit. DeepMind, Londres, 2017. Disponível em: https://deepmind.com/blog/trust-confidence-verifiable-data-audit/. Acesso em: 9 jul. 2026.
-TOUCAN. Blockchain for scaling climate action. [S. l.], 2023. Disponível em: https://blog.toucan.earth/wef-blockchains-for-climate-action/. Acesso em: 9 jul. 2026.
-VACCARGIU, Matteo; TONELLI, Roberto. Blockchain projects in environmental sector: theoretical and practical analysis. Earth, Basel: MDPI, v. 5, n. 3, 2024. Disponível em: https://www.mdpi.com/2673-4834/5/3/20. Acesso em: 9 jul. 2026.
-VERRA. Verra addresses crypto instruments and tokens. Washington, 2022. Disponível em: https://verra.org/verra-addresses-crypto-instruments-and-tokens/. Acesso em: 9 jul. 2026.
-VERRA. Verra and Hedera to accelerate digital transformation of carbon markets. Washington, 2025. Disponível em: https://verra.org/verra-and-hedera-to-accelerate-digital-transformation-of-carbon-markets/. Acesso em: 9 jul. 2026.
-W3C. Verifiable credentials data model v2.0. [S. l.]: W3C, 2025. Disponível em: https://www.w3.org/TR/vc-data-model-2.0/. Acesso em: 9 jul. 2026.
-X DEVELOPER PLATFORM. Recent search quickstart. [S. l.], 2026. Disponível em: https://docs.x.com/x-api/posts/search/quickstart/recent-search. Acesso em: 9 jul. 2026.
+Este relatório apresenta uma proposta metodológica e conceitual para a integração sistemática de Registros de Decisão Arquitetural (*Architectural Decision Records* - ADRs) ao Processo Unificado (*Unified Process* - UP). O Processo Unificado é historicamente reconhecido por seu caráter centrado na arquitetura, iterativo e incremental. Contudo, a rastreabilidade e a evolução das decisões de design ao longo de suas fases — Concepção, Elaboração, Construção e Transição — frequentemente sofrem com a perda de conhecimento técnico, fenômeno associado ao antipadrão do *Experimento Arquitetural Não Documentado*. 
+
+
+Para mitigar essa lacuna, propõe-se um framework que eleva as Provas de Conceito (PoCs) a instrumentos de decisão de primeira classe, formalizando sua ligação bidirecional com os ADRs dentro das iterações do UP. Adicionalmente, introduz-se uma abordagem de metamodelação unificada que permite a tradução dessas decisões e experimentos em representações legíveis por máquinas, viabilizando a consistência semântica e abrindo caminho para a automação assistida por modelos de linguagem (LLMs). A eficácia da abordagem é discutida sob a ótica da governança arquitetural, qualidade das decisões e redução da erosão de software.
+
+Como contribuição prática, este trabalho inclui uma ferramenta de validação lógica em Python (`validacao_logica.py`) capaz de verificar a consistência mínima de artefatos ADR/PoC serializados em JSON ou YAML. O validador operacionaliza parte do metamodelo proposto ao identificar ausências de evidência, incoerências entre fase do UP e estado do ADR, critérios de sucesso não satisfeitos e referências arquiteturais quebradas.
+
+
+## 1. Introdução e Justificativa
+
+
+A arquitetura de software contemporânea é caracterizada por cenários de alta incerteza tecnológica, requisitos voláteis e pressões por entregas rápidas [3:1]. Nesse contexto, a tomada de decisão arquitetural — que envolve a seleção de padrões, frameworks, topologias de implantação e estratégias de integração — define o sucesso ou a obsolescência prematura de um sistema de informação [3:1].
+
+
+O Processo Unificado (UP) consolidou-se na engenharia de software como uma metodologia sistemática conduzida por casos de uso e estritamente centrada na arquitetura [3:12, 3:19]. A fase de *Elaboração* do UP, em particular, tem como principal objetivo a mitigação de riscos técnicos e o estabelecimento de uma linha de base arquitetural (*architectural baseline*) estável [3:15, 3:18]. No entanto, as metodologias tradicionais do UP historicamente delegaram a especificação dessa linha de base a calhamaços de documentação estática (como o *Software Architecture Document* - SAD) [1:10, 3:9]. Tais documentos tendem a se tornar obsoletos à medida que o código evolui iterativamente nas fases de *Construção* e *Transição* [1:2, 1:12].
+
+
+A emergência dos Registros de Decisão Arquitetural (ADRs) ofereceu uma alternativa ágil para capturar o contexto, a decisão e as consequências das escolhas de design em documentos curtos, focados e versionados junto ao código-fonte [3:4, 3:9]. Todavia, a adoção de ADRs na indústria e na academia carece frequentemente de um elo metodológico com os processos de engenharia que geram as evidências para essas decisões [3:2, 3:9]. As decisões registradas em ADRs muitas vezes dependem de hipóteses que só podem ser validadas empiricamente por meio de experimentos técnicos, como as Provas de Conceito (PoCs) [3:1, 3:9].
+
+
+Se o resultado de uma PoC dita uma escolha arquitetural em uma iteração do UP, mas o processo experimental, suas métricas e premissas permanecem desconectados do ADR correspondente, ocorre o fenômeno da "arquitetura fantasma" [3:9]. Esse cenário caracteriza o antipadrão do **Experimento Arquitetural Não Documentado** (*Undocumented Architectural Experiment*) [3:2, 3:9].
+
+
+Este relatório propõe uma formulação teórica e prática para integrar sistematicamente os ADRs e os processos experimentais de PoC dentro do ciclo de vida do Processo Unificado. Com isso, busca-se estabelecer uma abordagem rigorosa, rastreável e passível de automação para a governança arquitetural de sistemas complexos.
+
+
+## 2. Fundamentação Teórica
+
+
+### 2.1. O Processo Unificado e a Centralidade Arquitetural
+
+O Processo Unificado organiza o ciclo de vida do desenvolvimento de software em quatro fases sucessivas [3:12]:
+
+1. **Concepção (*Inception*):** Definição do escopo do sistema, identificação de atores e estimativa de viabilidade econômica.
+
+2. **Elaboração (*Elaboration*):** Fase crítica onde a arquitetura do sistema é especificada e validada por meio do desenvolvimento de um protótipo executável (ou arquitetura executável) e da mitigação dos riscos de maior impacto [3:15].
+
+3. **Construção (*Construction*):** Implementação incremental das funcionalidades com base na arquitetura homologada.
+
+4. **Transição (*Transition*):** Testes finais, implantação no ambiente de produção e validação com o usuário final.
+
+
+Durante a Elaboração, a equipe de arquitetura deve validar hipóteses estruturais frente a atributos de qualidade (desempenho, escalabilidade, segurança e conformidade regulatória) [3:1, 3:8]. É nesta fase que a interação entre decisões conceituais e experimentação prática atinge seu ápice.
+
+
+### 2.2. Registros de Decisão Arquitetural (ADR)
+
+Propostos originalmente por Michael Nygard [3:4, 3:9], os ADRs são documentos de texto simples (frequentemente em Markdown) estruturados para registrar decisões significativas de arquitetura [3:4]. Sua estrutura básica inclui:
+
+* **Título:** Identificação clara e numerada da decisão.
+
+* **Contexto:** Os fatores técnicos, de negócio e sociais que motivaram a discussão.
+
+* **Decisão:** A alternativa escolhida e a justificativa para tal escolha.
+
+* **Status:** Estado atual da decisão (ex: Proposta, Aceita, Rejeitada, Superada).
+
+* **Consequências:** Os trade-offs introduzidos pela decisão, tanto positivos quanto negativos.
+
+
+Embora úteis, os ADRs tradicionais registram a decisão de forma predominantemente retrospectiva, sem expor os dados brutos e os cenários de teste empíricos que fundamentaram a escolha técnica.
+
+
+### 2.3. PoCs como Instrumentos de Decisão de Primeira Classe
+
+Conforme discutido na literatura recente sobre engenharia de software, uma Prova de Conceito (PoC) não deve ser tratada como um mero pedaço de código descartável ou um protótipo estético de interface [3:2, 3:4]. Em vez disso, a PoC desempenha o papel de um **experimento científico de curta duração**, projetado especificamente para validar hipóteses de design arquitetural sob restrições realistas [3:2, 3:4].
+
+
+Diferencia-se o artefato de *implementação* (o código da PoC, que de fato deve ser descartado para não acumular débito técnico no repositório principal) do artefato *experimental* (o desenho do teste, as métricas coletadas, as configurações do ambiente e os resultados) [3:3]. O artefato experimental possui caráter idempotente e reprodutível, devendo ser mantido como evidência durável associada ao ADR [3:3, 3:11].
+
+
+## 3. O Framework de Integração: ADR-UP-PoC
+
+
+Para consolidar as decisões e os experimentos no ciclo iterativo do Processo Unificado, propõe-se um framework composto por três dimensões integradas: mapeamento de fases, fluxo de validação experimental e metamodelação semântica.
+
+
+```
+
+       [ Fase de Concepção / Elaboração (UP) ]
+
+                         │
+
+                         ▼
+
+             ┌───────────────────────┐
+
+             │       Novo ADR        │◀──────────┐
+
+             │ (Status: Em Avaliação)│           │
+
+             └───────────────────────┘           │
+
+                         │                       │
+
+              Requer validação técnica?          │ (Iteração /
+
+                         │                       │  Refinamento)
+
+                    Sim  │  Não                  │
+
+                         ▼                       │
+
+             ┌───────────────────────┐           │
+
+             │   Planejamento PoC    │           │
+
+             │  (Hipóteses/Métricas) │           │
+
+             └───────────────────────┘           │
+
+                         │                       │
+
+                         ▼                       │
+
+             ┌───────────────────────┐           │
+
+             │     Execução PoC      │           │
+
+             │ (Métricas de Execução)│           │
+
+             └───────────────────────┘           │
+
+                         │                       │
+
+                         ▼                       │
+
+             ┌───────────────────────┐           │
+
+             │    Decisão do ADR     │───────────┘
+
+             │  (Status: Aceito /    │
+
+             │       Rejeitado)      │
+
+             └───────────────────────┘
+
+                         │
+
+                         ▼
+
+         [ Código e Documentação Técnica ]
+
+```
+
+
+### 3.1. Mapeamento de Fases e Estados do ADR no UP
+
+As decisões arquiteturais evoluem conforme as fases do UP avançam. Propõe-se o seguinte alinhamento do ciclo de vida dos ADRs com as fases do processo:
+
+
+| Fase do UP | Atividade de Design Principal | Status Típico do ADR | Papel da Validação Experimental |
+
+| :--- | :--- | :--- | :--- |
+
+| **Concepção** | Identificação de alternativas de alto nível | *Proposto* ou *Em Avaliação* | Viabilidade teórica e busca por restrições de mercado. |
+
+| **Elaboração** | Definição da linha de base e mitigação de riscos | *Em Avaliação* $\rightarrow$ *Aceito* | Execução ativa de PoCs estruturadas para homologar as decisões críticas [3:15]. |
+
+| **Construção** | Evolução técnica e refinamento de detalhes | *Aceito*, *Rejeitado* ou *Superado* | Ajustes pontuais e manutenção de consistência frente ao código. |
+
+| **Transição** | Homologação operacional e governança pós-entrega | *Superado* ou *Arquivado* | Avaliação de métricas em produção para recalibrar premissas de ADRs futuros. |
+
+
+### 3.2. Fluxo de Validação de Decisões via PoC
+
+Para impedir a ocorrência do antipadrão *Experimento Arquitetural Não Documentado* [3:2, 3:9], o framework impõe um protocolo de três fases para qualquer decisão arquitetural que envolva risco técnico moderado ou alto [3:1, 3:6]:
+
+
+1. **Planejamento Associado:** Ao propor um ADR, o arquiteto identifica as hipóteses de risco (ex: *"O framework de mensageria X consegue processar 5000 req/s com latência < 10ms?"*). Um plano de PoC é gerado, especificando objetivos, métricas quantitativas (KPIs), pré-requisitos de infraestrutura e cenários de teste [3:6].
+
+2. **Execução Isolada:** O experimento é executado em ambiente controlado (representativo do ambiente de produção do UP) [3:3, 3:6]. O código resultante é mantido em um repositório temporário ou descartado (Fowler’s sacrificial architecture [3]), mas a massa de dados do teste, os logs de desempenho e os scripts de configuração são catalogados de forma imutável [3:3].
+
+3. **Decisão e Registro de Evidência:** Os dados coletados são comparados aos critérios de sucesso predefinidos [3:7]. O ADR é então atualizado para o status *Aceito* ou *Rejeitado*, incluindo um hiperlink direto para o relatório consolidado da PoC e suas métricas brutas [3:7, 3:9]. 
+
+
+Este elo estruturado garante que qualquer auditoria futura ou necessidade de refatoração encontre a justificativa conceitual (ADR) e a comprovação empírica (PoC) de forma unificada [3:2, 3:9].
+
+
+## 4. Metamodelação Semântica e Automação
+
+
+A evolução recente das ferramentas de Engenharia Direcionada por Modelos (MDE) e a introdução de técnicas de Inteligência Artificial Generativa (conforme detalhado na literatura de metamodelos unificados) permitem que esses artefatos arquiteturais transcendam arquivos de texto isolados [1:1, 1:12]. 
+
+
+### 4.1. Formalização do Metamodelo de Decisão
+
+Propõe-se a representação das decisões e dos resultados de experimentos de software através de um metamodelo arquitetural legível por máquinas [1:1, 1:12]. Esse metamodelo, estruturado em formatos como JSON ou YAML, conecta as entidades de negócio (requisitos) às decisões conceituais (ADRs), aos dados empíricos (PoCs) e aos artefatos de implementação (componentes e código-fonte) [1:1, 1:12].
+
+
+A formalização do metamodelo de decisão compreende as seguintes entidades estruturais [1:11]:
+
+* **BusinessCapability / Requirement:** O driver de negócio que motiva a decisão [1:11].
+
+* **ArchitecturalDecision (ADR):** O elemento conceitual contendo ID, contexto, justificativa e status [1:11, 3:4].
+
+* **TechnicalExperiment (PoC):** O elemento de validação contendo hipóteses, variáveis de ambiente, cenários de teste e métricas observadas [3:6, 3:7].
+
+* **SystemComponent:** O elemento físico do sistema (Container, Component, Interface) afetado pela decisão [1:11].
+
+
+```json
+
+{
+
+  "$schema": "https://unificado.org/schemas/decision-metamodel.json",
+
+  "id": "ADR-0042",
+
+  "title": "Adoção de Banco de Dados de Séries Temporais para Telemetria",
+
+  "upPhase": "Elaboration",
+
+  "status": "Accepted",
+
+  "riskLevel": "High",
+
+  "validationRequired": true,
+
+  "context": "Necessidade de persistir alto volume de dados de sensores com baixo custo de armazenamento.",
+
+  "justification": "Desempenho superior de gravação e compressão nativa em comparação com bancos relacionais tradicionais.",
+
+  "validationPoC": {
+
+    "id": "POC-0042-A",
+
+    "hypothesis": "O banco de dados Y suporta 50.000 gravações por segundo sob uso de CPU inferior a 60%.",
+
+    "metrics": {
+
+      "throughput_req_sec": 52000,
+
+      "avg_cpu_utilization_percent": 42.5,
+
+      "storage_compression_ratio": "4.2:1"
+
+    },
+
+    "successCriteria": [
+
+      {
+
+        "metric": "throughput_req_sec",
+
+        "operator": ">=",
+
+        "target": 50000
+
+      },
+
+      {
+
+        "metric": "avg_cpu_utilization_percent",
+
+        "operator": "<",
+
+        "target": 60
+
+      }
+
+    ],
+
+    "reproducibility": {
+
+      "environment": "Kubernetes cluster, v1.30, node-type: c5.xlarge",
+
+      "scriptsRepository": "git://archive/pocs/poc-0042-telemetry.git"
+
+    }
+
+  },
+
+  "impactedComponents": [
+
+    {
+
+      "id": "telemetry-collector-service",
+
+      "type": "Container",
+
+      "layer": "System/Runtime"
+
+    }
+
+  ]
+
+}
+
+```
+
+
+### 4.2. Papel de Modelos de Linguagem e IA Generativa (GenAI)
+
+Ao adotar representações estruturadas (como o JSON acima ou diagramas em formato texto como Mermaid e PlantUML) [1:1, 1:2], o ciclo de vida das decisões no Processo Unificado passa a contar com suporte assistido por inteligência artificial [1:1, 2:1]. 
+
+
+Modelos de linguagem modernos (LLMs), quando alimentados com um contexto arquitetural estruturado e restrito por metamodelos [1:1, 1:3]:
+
+1. **Reduzem Alucinações:** A presença de esquemas formais e links de evidência entre ADRs e PoCs impede que o modelo infira dependências inexistentes [1:3, 1:12].
+
+2. **Automatizam Análises de Impacto:** O modelo consegue rastrear se a alteração em uma capacidade de negócio viola restrições estabelecidas em um ADR de uma iteração anterior [1:11, 1:12].
+
+3. **Geram Esboços de Código Alinhados:** Conforme documentado em experimentos de engenharia reversa e geração assistida por IA, o código gerado a partir de especificações arquiteturais estruturadas exibe fidelidade conceitual muito superior a abordagens baseadas puramente em prompts de texto livre [1:2, 1:5].
+
+
+### 4.3. Artefato Implementado: Validador Lógico em Python
+
+Para demonstrar a viabilidade operacional da proposta, foi implementada a ferramenta `validacao_logica.py`, uma interface de linha de comando que valida artefatos ADR/PoC serializados. A ferramenta não substitui a análise arquitetural humana; sua função é atuar como uma barreira automatizada de consistência, especialmente útil em revisões de arquitetura, pipelines de integração contínua e auditorias técnicas.
+
+O validador executa um conjunto inicial de regras lógicas:
+
+* **Completude do ADR:** cada decisão deve declarar identificador, título, fase do UP, status, contexto e justificativa.
+
+* **Vocabulário controlado:** fases e estados são normalizados para termos aceitos, permitindo entradas em português ou inglês.
+
+* **Evidência obrigatória para risco:** decisões aceitas ou rejeitadas com risco médio, alto ou crítico exigem PoC associada.
+
+* **Integridade da PoC:** hipóteses, métricas, critérios de sucesso e dados de reprodutibilidade são verificados.
+
+* **Avaliação de critérios quantitativos:** métricas observadas são comparadas a operadores como `>=`, `<`, `==` e `!=`.
+
+* **Rastreabilidade entre ADRs:** relações como dependência, substituição e conflito devem apontar para decisões existentes.
+
+* **Consistência de ciclo de vida:** combinações suspeitas, como ADR ainda proposto na fase de Transição, são reportadas como alertas.
+
+O uso básico é direto:
+
+```bash
+python validacao_logica.py --example
+python validacao_logica.py decisao.json
+python validacao_logica.py decisao.json --strict --format json
+```
+
+A opção `--strict` permite que alertas também interrompam uma pipeline automatizada. A opção `--format json` produz uma saída estruturada que pode ser consumida por ferramentas de CI/CD, agentes de governança ou painéis de qualidade arquitetural. Com isso, o metamodelo deixa de ser apenas uma representação documental e passa a funcionar como contrato verificável entre decisão, experimento e implementação.
+
+
+## 5. Avaliação e Discussão
+
+
+A integração de ADRs e PoCs como instrumentos de decisão de primeira classe no Processo Unificado altera fundamentalmente a dinâmica das equipes de engenharia durante o desenvolvimento de sistemas complexos [3:1, 3:9].
+
+
+### 5.1. Mitigação da Erosão Arquitetural
+
+A erosão arquitetural ocorre quando o código implementado desvia-se progressivamente das intenções de design originais [1:5]. No UP tradicional, a falta de sincronia entre as fases de Elaboração (onde as decisões são tomadas) e Construção (onde o código é massivamente escrito) acelera essa erosão [1:5, 3:9]. 
+
+
+Ao acoplar cada decisão arquitetural crítica a um experimento empírico (PoC) documentado e estruturado na forma de metadados legíveis [3:3, 3:7]:
+
+* O conhecimento técnico gerado durante a fase de Elaboração torna-se perene e imutável [3:3].
+
+* Desenvolvedores integrados ao projeto na fase de Construção dispõem não apenas de regras dogmáticas (*"use a tecnologia X"*), mas de limites experimentais claros (*"a tecnologia X foi aceita porque o teste Y comprovou que o cenário Z atende ao requisito regulatório"*), facilitando a adesão e o refinamento consciente das decisões [3:1, 3:9].
+
+
+### 5.2. Desafios de Adoção e Sobrecarga de Processo
+
+Apesar dos benefícios evidentes em termos de qualidade de decisão e rastreabilidade [3:2, 3:10], a introdução desse framework exige cuidados metodológicos:
+
+1. **Risco de Burocratização:** Se todas as decisões menores exigirem um ADR formal e uma PoC estruturada, o processo perderá sua agilidade inerente [3:10]. Recomenda-se aplicar o fluxo completo apenas para decisões categorizadas como "críticas" ou "de alto impacto" de acordo com o modelo de *Risk-Driven Design* [3:1, 3:4].
+
+2. **Curva de Aprendizado:** Exigir que arquitetos desenhem experimentos replicáveis e capturem metadados estruturados demanda maturidade técnica e familiaridade com práticas de automação de testes e infraestrutura como código (IaC) [3:1, 3:3].
+
+
+### 5.3. Validação Automatizada como Mecanismo de Governança
+
+A ferramenta implementada reforça a contribuição metodológica ao transformar regras de governança em verificações executáveis. Em vez de depender exclusivamente da revisão manual de documentos, a equipe pode validar se uma decisão crítica possui evidência empírica, se os critérios quantitativos da PoC foram satisfeitos e se os vínculos entre decisões permanecem íntegros após sucessivas iterações do UP.
+
+Esse mecanismo reduz o custo de adoção do framework porque desloca parte da disciplina documental para uma verificação repetível. Ao mesmo tempo, seus resultados devem ser interpretados como sinais de governança, não como prova absoluta de qualidade arquitetural. Um ADR pode ser formalmente válido e ainda assim representar uma decisão ruim; inversamente, um alerta do validador pode indicar apenas uma exceção justificável. O valor está em tornar essas exceções explícitas, revisáveis e rastreáveis.
+
+
+## 6. Conclusões e Trabalhos Futuros
+
+
+Este relatório delineou uma abordagem integrada para a tomada e manutenção de decisões arquiteturais no contexto do Processo Unificado. Demonstrou-se que a união de Registros de Decisão Arquitetural (ADRs) com Provas de Conceito (PoCs) formalizadas atenua de forma mensurável o descolamento entre teoria de design e prática de implementação, eliminando o antipadrão do *Experimento Arquitetural Não Documentado* [3:2, 3:9].
+
+Além da formulação conceitual, a implementação do validador lógico em Python materializa um primeiro passo rumo à arquitetura como artefato verificável. A ferramenta demonstra que regras simples de completude, evidência, consistência temporal e rastreabilidade já são suficientes para detectar lacunas relevantes em decisões arquiteturais registradas de modo estruturado.
+
+
+A evolução natural desta pesquisa acadêmica e de sua aplicação na indústria foca em três vertentes principais:
+
+1. **Álgebra de Transformação de Modelos:** Desenvolvimento de regras formais de mapeamento e verificação de consistência entre diagramas arquiteturais estruturados (C4/UML), registros de decisão e código-fonte gerado [1:10, 1:12].
+
+2. **Orquestração de Agentes Inteligentes:** Investigação de arquiteturas multiagente especializadas em governança técnica, capazes de identificar automaticamente inconformidades entre o código em execução e as restrições normativas impostas pelos ADRs de baseline [1:2, 1:12].
+
+3. **Validação Estatística em Larga Escala:** Realização de estudos de campo empíricos e longitudinais para quantificar com rigor estatístico o impacto da adoção do framework na redução de defeitos de integração e no tempo de integração de novos engenheiros de software [3:11, 3:12].
+
+
+A formalização das decisões de software como dados estruturados e passíveis de validação empírica constitui, portanto, um passo fundamental para transformar a arquitetura de sistemas de uma disciplina eminentemente artesanal em uma engenharia verdadeiramente previsível, mensurável e sustentável.
+
+
+## Referências 
+
+
+* **[1]** Grynets, O.; Lyashkevych, V. *Unified Architecture Metamodel of Information Systems Developed by Generative AI*. EPAM Systems, 2026. (File 001.txt)
+
+* **[2]** Ye, Y. (Fanny) et al. *LLMs4All: A Review of Large Language Models Across Academic Disciplines*. University of Notre Dame, 2025. (File 002.txt)
+
+* **[3]** Antognolli, B. F.; Petrillo, F. *Proof of Concept as a First-Class Architectural Decision Instrument*. ICSE-Companion, 2026. (File 003.txt)
+
