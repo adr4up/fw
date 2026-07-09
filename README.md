@@ -1,690 +1,165 @@
-# Arquitectura e Implementação em Google Apps Script de um Sistema DAO para Loop Engineering
-
-
-## Resumo
-
-Este relatório propõe a arquitectura e implementação de um sistema baseado no padrão Data Access Object (DAO) em Google Apps Script (GAS), desenhado especificamente para suportar fluxos de trabalho do tipo *Loop Engineering* — a disciplina emergente de estruturar o desenvolvimento assistido por Inteligência Artificial em ciclos repetidos de acção e feedback. A arquitectura proposta integra princípios de governança e disciplina arquitectural inspirados na constituição Spec Kit, bem como uma abordagem multi-agente com verificação determinista de evidências, adaptada do sistema CAPRA. O resultado é um sistema em camadas que abstrai o acesso a dados em Google Sheets através de DAOs tipados, orquestra agentes especializados através de registos centralizados e valida cada transição de estado com base em evidências concretas, tudo dentro das restrições operacionais da plataforma Google Apps Script.
-
-Como complemento executável, o trabalho inclui uma ferramenta Python de validação lógica que verifica achados contra texto-fonte por *Evidence Anchoring*, aplica limiares determinísticos de confiança, sinaliza duplicatas e detecta contradições declaradas. Essa ferramenta permite validar relatórios, achados de agentes e evidências antes de persistir resultados no ambiente GAS.
-
-**Palavras-chave:** Data Access Object, Loop Engineering, Google Apps Script, Multi-Agent Systems, Evidence Anchoring, Arquitectura em Camadas, Google Sheets como Base de Dados.
-
----
-
-## 1. Introdução
-
-A engenharia de software contemporânea está a atravessar uma transformação profunda impulsionada pela integração de modelos de linguagem de grande escala (LLMs) nos fluxos de trabalho de desenvolvimento. Do prompting manual à construção de sistemas autónomos que gerem ciclos completos de trabalho, a disciplina conhecida como *Loop Engineering* emerge como um novo paradigma que redefine o papel do engenheiro de software [1]. Paralelamente, o padrão Data Access Object (DAO) permanece como um dos pilares da arquitectura de software para abstração de persistência, permitindo que a lógica de negócio se mantenha independente do mecanismo de armazenamento subjacente [4].
-
-A intersecção destes dois conceitos — a automatização de ciclos de feedback e a abstração de acesso a dados — levanta questões arquitecturais relevantes, particularmente em ambientes com restrições operacionais significativas. O Google Apps Script (GAS), uma plataforma JavaScript nativa do ecossistema Google Workspace, representa um cenário de implementação particularmente desafiante. Os seus limites de tempo de execução (6 minutos por invocação de *trigger*), as cotas de acesso às APIs do Google e a ausência de ferramentas de desenvolvimento tradicionais (IDEs avançadas, debuggers, testes automatizados nativos) exigem uma arquitectura cuidadosamente projectada [5].
-
-Este relatório apresenta uma proposta arquitectural completa para um sistema DAO em Google Apps Script, desenhado para suportar fluxos de Loop Engineering. A proposta inspira-se em dois documentos de referência: a constituição Spec Kit [2], que estabelece princípios rigorosos de qualidade de código, disciplina arquitectural e governança; e o paper CAPRA [3], que demonstra a viabilidade de sistemas multi-agente com verificação determinista de evidências para avaliação de entregas de arquitectura de software.
-
-O objectivo central deste trabalho é demonstrar como combinar a abstração de dados do padrão DAO, a disciplina arquitectural da Spec Kit e a orquestração multi-agente do CAPRA num sistema coerente, testável e operacionál dentro do ecossistema Google Workspace, utilizando Google Sheets como repositório de dados persistente para agentes de IA autónomos.
-
----
-
-## 2. Enquadramento Teórico
-
-### 2.1. Loop Engineering: Da Engenharia de Prompts à Engenharia de Sistemas
-
-A transição do prompting manual para a engenharia de loops representa uma mudança fundamental na forma como os profissionais de software interagem com agentes de IA. Segundo Addy Osmani [1], *Loop Engineering* é o acto de substituir a pessoa que faz *prompting* ao agente pelo sistema que o faz automaticamente. Um *loop*, neste contexto, pode ser entendido como um objectivo recursivo onde se define um propósito e a IA itera até à conclusão.
-
-A disciplina de Loop Engineering estrutura-se em torno de cinco estágios fundamentais que formam o ciclo básico de operação de qualquer sistema de desenvolvimento assistido por IA:
-
-| Estágio | Descrição | Função no Sistema |
-|---|---|---|
-| **Intent** | Definição do resultado desejado | Estabelece o objectivo concreto e observável da tarefa |
-| **Context** | Recolha de código, documentação, logs e restrições | Fornece ao agente a informação relevante para a execução |
-| **Action** | Edição de ficheiros, execução de comandos, chamada de ferramentas | Realiza a transformação concreta no sistema |
-| **Observation** | Captura de resultados de testes, *diffs*, *reviews*, logs | Transforma saídas em novas entradas de contexto |
-| **Adjustment** | Actualização do plano e repetição do ciclo | Decide se continua, repara ou conclui a tarefa |
-
-A literatura recente identifica vários padrões de loops especializados [1], incluindo o *Test-Driven Agent Loop* (onde o agente reproduz uma falha e itera até à resolução), o *Compiler-Driven Loop* (onde o compilador fornece feedback estrutural), o *Review-Driven Loop* (onde o feedback humano orientá as iterações), o *Runtime Debugging Loop* e o *Product Iteration Loop*. Cada padrão requer diferentes sinais de observação e regras de paragem, o que implica que o sistema de persistência deve ser flexível o suficiente para suportar múltiplos tipos de dados e estados.
-
-### 2.2. O Padrão Data Access Object (DAO)
-
-O padrão DAO, formalizado pela Sun Microsystems (actual Oracle) [4], fornece uma interface abstracta para um mecanismo de persistência, separando a lógica de acesso a dados da lógica de negócio. A sua raiz encontra-se no padrão Adapter, e a sua principal vantagem é a capacidade de isolar as alterações no mecanismo de armazenamento do restante sistema.
-
-Num contexto de Google Apps Script, o DAO assume particular importância porque:
-
-- **Abstrai a complexidade da API do `SpreadsheetApp`**, cujas chamadas são lentas e sujeitas a limites de quotas.
-- **Centraliza a lógica de validação**, permitindo que regras de integridade sejam aplicadas de forma consistente.
-- **Facilita a testabilidade**, já que os DAOs podem ser substituídos por *mocks* durante testes unitários.
-- **Suporta a idempotência**, garantindo que operações repetidas não corrompem o estado.
-
-### 2.3. Princípios da Spec Kit (base.txt)
-
-A constituição Spec Kit [2] define cinco princípios fundamentais de qualidade arquitectural que são directamente transferíveis para a implementação em Google Apps Script:
-
-**Princípio I: Qualidade de Código e Disciplina Arquitectural.** O princípio mais relevante é a separação da superfície de invocação da lógica importável. Em GAS, isto traduz-se na separação entre as funções que servem como *entry points* (ex: `doGet`, `doPost`, funções associadas a *triggers*) e os módulos de lógica de negócio que podem ser testados independentemente do *runtime* do GAS.
-
-**Princípio II: Mudança Suportada por Testes.** Embora o GAS não possua um *framework* de testes nativo equivalente ao *pytest*, o princípio exige que toda a lógica de negócio seja escrita em módulos testáveis, com a camada de integração com o Google reduzida ao mínimo possível.
-
-**Princípio III: Consistência na Interface.** Em GAS, isto aplica-se às respostas HTTP (`doGet`/`doPost`), às estruturas de dados retornadas e às convenções de nomenclatura dos DAOs.
-
-**Princípio IV: Desempenho e Disciplina de Recursos.** O GAS impõe limites rigorosos de tempo de execução (6 minutos por invocação) e cotas de acesso às APIs. O princípio de *offline-first* da Spec Kit traduz-se aqui numa filosofia de *eager loading* de dados e minimização de chamadas ao `SpreadsheetApp`.
-
-**Princípio V: Dependências Mínimas e Operações de Ficheiro Seguras.** No contexto do GAS, isto implica que o sistema não deve depender de bibliotecas externas não suportadas e que todas as operações de escrita nas folhas de cálculo devem ser validadas, idempotentes e protegidas contra corrupção.
-
-### 2.4. Orquestração Multi-Agente e Evidence Anchoring (Paper.txt - CAPRA)
-
-O sistema CAPRA [3] apresenta uma arquitectura multi-agente que processa documentos de arquitectura de software através de uma *pipeline* de quatro estágios: *Document Parsing*, *Parallel Verification Agents*, *Evidence Anchoring* e *Report Generation*. O que distingue o CAPRA é a camada de **Evidence Anchoring**, um mecanismo determinista que verifica se as conclusões geradas pelos agentes têm suporte efectivo nos dados fonte, utilizando *fuzzy matching* via distância de Levenshtein normalizada.
-
-Os agentes especializados do CAPRA incluem o *SpecificationAuditorAgent*, o *TestAuditorAgent*, o *FeatureCheckAgent* e o *TraceabilityMatrixAgent*. Cada agente opera de forma independente, produzindo *findings* com pontuações de confiança, que são depois consolidadas por um *ConsistencyManager*.
-
-A adaptação desta abordagem para o contexto de Loop Engineering em GAS sugere que os agentes do sistema não devem apenas executar tarefas, mas devem também produzir evidências verificáveis para cada decisão que tomam. O *Evidence Anchoring* funciona como uma barreira de confiança entre a execução e a persistência, garantindo que apenas operações validadas são consolidadas no repositório de dados.
-
----
-
-## 3. Arquitectura Proposta
-
-### 3.1. Visão Geral
-
-A arquitectura proposta adopta um modelo em cinco camadas, cada uma com responsabilidades bem definidas e interfaces claras. A figura abaixo apresenta a visão geral do sistema:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     WEB APP / TRIGGER INTERFACE                 │
-│              (doGet / doPost / Time-Driven Triggers)            │
-├─────────────────────────────────────────────────────────────────┤
-│                     ORCHESTRATOR LAYER                          │
-│         (Loop Engine, Task Router, Consistency Manager)         │
-├─────────────────────────────────────────────────────────────────┤
-│                        AGENT LAYER                              │
-│     (Discovery Agent, Action Agent, Verifier Agent, Logger)     │
-├─────────────────────────────────────────────────────────────────┤
-│                     EVIDENCE ANCHORING LAYER                    │
-│     (Evidence Validator, Confidence Modulator, Deduplication)   │
-├─────────────────────────────────────────────────────────────────┤
-│                        DAO LAYER                                │
-│   (StateDAO, TaskDAO, AgentLogDAO, ConfigDAO, RegistryDAO)      │
-├─────────────────────────────────────────────────────────────────┤
-│                     DATA LAYER (Google Sheets)                  │
-│   (Sheet: State | Sheet: Tasks | Sheet: AgentLog | Sheet: Config)|
-└─────────────────────────────────────────────────────────────────┘
-```
-
-A camada de interface (*Web App / Trigger Interface*) serve como ponto de entrada do sistema, responsável por receber requisições HTTP (via *Web App*) ou por ser activada periodicamente (via *Time-Driven Triggers*). A camada de orquestração coordena o ciclo de vida das tarefas, decidindo qual agente deve ser activado com base no estado actual do sistema. A camada de agentes contém os módulos especializados que executam acções concretas. A camada de *Evidence Anchoring* valida as conclusões dos agentes antes de as consolidar. A camada DAO abstrai o acesso às Google Sheets, e a camada de dados contém as folhas de cálculo propriamente ditas.
-
-### 3.2. Registry-Driven Architecture
-
-Inspirado na Spec Kit [2], o sistema utiliza um registo central como fonte única da verdade para o mapeamento entre tipos de tarefas, agentes responsáveis e DAOs necessários. Este padrão garante que a adicção de novas capacidades não exige modificações no motor de loop, apenas a registacção de novos componentes.
-
-A tabela abaixo apresenta a estrutura do registo de tarefas:
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `taskType` | `string` | Identificador único do tipo de tarefa |
-| `agentClass` | `Class` | Referência à classe do agente responsável |
-| `inputDAO` | `Class` | DAO que fornece os dados de entrada |
-| `outputDAO` | `Class` | DAO que recebe os resultados |
-| `evidenceDAO` | `Class` | DAO que armazena as evidências de validação |
-| `maxRetries` | `number` | Número máximo de tentativas antes de falha |
-| `timeoutMs` | `number` | Tempo máximo de execução para esta tarefa |
-| `priority` | `number` | Prioridade na fila de execução (menor = maior prioridade) |
-
-A implementação do registo em GAS segue a convenção de nomenclatura da Spec Kit: módulos privados são prefixados com *underscore*, as chaves mantêm a sua forma canónica (frequentemente *hyphenated*), e as importações são mantidas em ordem alfabética. Duplicatas de chaves falham ruidosamente, não silenciosamente.
-
-### 3.3. Evidência como Barreira de Confiança
-
-A camada de *Evidence Anchoring* é o coração da fiabilidade do sistema. Inspirada no CAPRA [3], esta camada implementa um algoritmo determinista que verifica se as conclusões dos agentes têm suporte efectivo nos dados observados. A verificação opera em dois níveis:
-
-**Nível 1: Presença de Citação.** Cada agente deve produzir uma citação directa dos dados que suportam a sua conclusão. Se a citação estiver ausente, a confiança é reduzida em 50%. Se for demasiado curta (inferior a 15 caracteres), aplica-se uma penalização de 30%.
-
-**Nível 2: Matching de Evidência.** Para citações de comprimento padrão, o sistema aplica um *trigram overlap pre-filter* (sobreposição de trigramas acima de 0.27) seguido de cálculo da distância de Levenshtein normalizada. Se a similaridade máxima for inferior ao limiar de descartar (τ_min = 0.45), a conclusão é considerada não verificável e rejeitada. Se for superior a 0.70, a confiança é ligeiramente aumentada. Se estiver entre 0.45 e 0.70, a confiança é modulada proporcionalmente.
-
-Após a modulação, um filtro de confiança elimina qualquer conclusão com pontuação inferior a 0.65. As conclusões sobreviventes são consolidadas pelo *ConsistencyManager*, que elimina duplicatas e ordena por severidade.
-
-### 3.4. Separação de Agentes: Maker vs. Checker
-
-Um dos princípios mais importantes da arquitectura é a separação entre o agente que executa a acção (*maker*) e o agente que verifica o resultado (*checker*). Esta separação, inspirada no *Sub-Agent* pattern do Loop Engineering [1] e no *ConsistencyManager* do CAPRA [3], garante que um modelo não avalia o seu próprio trabalho, mitigando o risco de alucinações e auto-confirmação.
-
-| Agente | Função | Model |
-|---|---|---|
-| **DiscoveryAgent** | Identifica trabalho pendente e tria prioridade | Modelo leve, leitura apenas |
-| **ActionAgent** | Executa a tarefa e produz resultados | Modelo de alto desempenho |
-| **VerifierAgent** | Valida resultados contra critérios de sucesso | Modelo independente do ActionAgent |
-| **LoggerAgent** | Regista evidências e actualiza estado | Modelo leve, escrita apenas |
-
----
-
-## 4. Implementação em Google Apps Script
-
-### 4.1. Estrutura de Directórios
-
-A estrutura de ficheiros segue o padrão de nomenclatura da Spec Kit [2], com directórios em *underscores* e chaves em forma canónica:
-
-```
-src/
-├── _core/
-│   ├── BaseDAO.js            # Classe base para todos os DAOs
-│   ├── EvidenceAnchor.js     # Mecanismo de Evidence Anchoring
-│   └── Registry.js           # Registo central de tarefas
-├── _agents/
-│   ├── _DiscoveryAgent.js    # Agente de descoberta (privado)
-│   ├── _ActionAgent.js       # Agente de execução (privado)
-│   ├── _VerifierAgent.js     # Agente de verificação (privado)
-│   └── _LoggerAgent.js       # Agente de registo (privado)
-├── daos/
-│   ├── StateDAO.js           # DAO para gestão de estado
-│   ├── TaskDAO.js            # DAO para gestão de tarefas
-│   ├── AgentLogDAO.js        # DAO para registo de actividade
-│   ├── ConfigDAO.js          # DAO para configuração
-│   └── RegistryDAO.js        # DAO para gestão do registo
-├── loop/
-│   ├── LoopEngine.js         # Motor principal do loop
-│   └── TaskRouter.js         # Router de tarefas
-├── _commands/
-│   ├── doGet.gs              # Entry point para Web App (GET)
-│   ├── doPost.gs             # Entry point para Web App (POST)
-│   └── _triggers.gs          # Entry points para triggers temporizados
-└── tests/
-    ├── test_evidence_anchor.gs
-    └── test_registry.gs
-```
-
-### 4.2. Implementação do DAO Base
-
-O DAO base abstrai todas as interações com o `SpreadsheetApp`, implementando operações seguras e idempotentes:
-
-```javascript
-/**
- * @fileoverview BaseDAO - Classe base para todos os DAOs do sistema.
- * Abstrai o acesso ao SpreadsheetApp e implementa operações
- * seguras, idempotentes e com validação de inputs.
- * 
- * Segue os princípios I e V da Spec Kit Constitution.
- */
-
-/** @const {string} ID da folha de cálculo principal */
-const CONFIG_SPREADSHEET_ID = PropertiesService
-    .getScriptProperties()
-    .getProperty('SPREADSHEET_ID');
-
-/**
- * DAO base que abstrai o acesso às Google Sheets.
- * Implementa segurança de caminhos e idempotência.
- */
-class BaseDAO {
-  /**
-   * @param {string} sheetName - Nome da folha de cálculo.
-   * @param {Object} options - Opções de configuração.
-   * @param {boolean} [options.autoCreate=false] - Criar folha se não existir.
-   */
-  constructor(sheetName, options = {}) {
-    this._sheetName = sheetName;
-    this._spreadsheetId = CONFIG_SPREADSHEET_ID;
-    this._options = options;
-    this._cache = null;
-  }
-
-  /**
-   * Obtém a folha de cálculo, com *lazy loading* e *cache*.
-   * @returns {GoogleAppsScript.Spreadsheet.Sheet}
-   */
-  getSheet() {
-    if (!this._cache) {
-      const spreadsheet = SpreadsheetApp.openById(this._spreadsheetId);
-      let sheet = spreadsheet.getSheetByName(this._sheetName);
-      if (!sheet && this._options.autoCreate) {
-        sheet = spreadsheet.insertSheet(this._sheetName);
-      }
-      this._cache = sheet;
-    }
-    return this._cache;
-  }
-
-  /**
-   * Lê todos os registos da folha como array de objectos.
-   * A primeira linha é tratada como cabeçalho.
-   * @returns {Object[]} Array de registos.
-   */
-  readAll() {
-    const sheet = this.getSheet();
-    const data = sheet.getDataRange().getValues();
-    if (data.length === 0) return [];
-
-    const headers = data[0];
-    const records = [];
-    for (let i = 1; i < data.length; i++) {
-      const record = {};
-      headers.forEach((header, index) => {
-        record[header] = data[i][index];
-      });
-      records.push(record);
-    }
-    return records;
-  }
-
-  /**
-   * Escreve registos de forma segura e idempotente.
-   * Verifica duplicações antes de inserir.
-   * @param {Object[]} records - Registos a inserir.
-   * @param {string} [keyField='id'] - Campo utilizado como chave primária.
-   * @returns {number} Número de registos inseridos.
-   */
-  safeUpsert(records, keyField = 'id') {
-    if (!records || records.length === 0) return 0;
-
-    const existing = this.readAll();
-    const existingKeys = new Set(existing.map(r => r[keyField]));
-    const newRecords = records.filter(r => !existingKeys.has(r[keyField]));
-
-    if (newRecords.length === 0) return 0;
-
-    const sheet = this.getSheet();
-    const headers = Object.keys(newRecords[0]);
-    const rows = newRecords.map(r => headers.map(h => r[h]));
-
-    sheet.getRange(
-      sheet.getLastRow() + 1, 1,
-      rows.length, headers.length
-    ).setValues(rows);
-
-    return newRecords.length;
-  }
-
-  /**
-   * Actualiza um registo existente.
-   * @param {string} id - Identificador do registo.
-   * @param {Object} updates - Campos a actualizar.
-   * @param {string} [keyField='id'] - Campo chave primária.
-   * @returns {boolean} Verdadeiro se o registo foi actualizado.
-   */
-  update(id, updates, keyField = 'id') {
-    const sheet = this.getSheet();
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const keyIndex = headers.indexOf(keyField);
-
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][keyIndex] === id) {
-        Object.entries(updates).forEach(([field, value]) => {
-          const colIndex = headers.indexOf(field);
-          if (colIndex !== -1) {
-            sheet.getRange(i + 1, colIndex + 1).setValue(value);
-          }
-        });
-        return true;
-      }
-    }
-    return false;
-  }
-}
-```
-
-### 4.3. Implementação do Evidence Anchor
-
-O mecanismo de *Evidence Anchoring* implementa a lógica de validação determinista inspirada no CAPRA [3]:
-
-```javascript
-/**
- * @fileoverview EvidenceAnchor - Mecanismo de validação determinista
- * de conclusões geradas por agentes.
- * 
- * Segue o princípio II da Spec Kit e a abordagem de Evidence Anchoring
- * descrita no paper CAPRA.
- */
-
-/** @const {number} Limiar mínimo para descartar citações não verificáveis */
-const EVIDENCE_DISCARD_THRESHOLD = 0.45;
-
-/** @const {number} Limiar mínimo de confiança para consolidar conclusões */
-const CONFIDENCE_MIN_THRESHOLD = 0.65;
-
-/** @const {number} Sobreposição mínima de trigramas para prosseguir */
-const TRIGRAM_OVERLAP_THRESHOLD = 0.27;
-
-/**
- * Valida a evidência de uma conclusão e modula a confiança.
- * @param {Object} finding - Conclusão com citação e confiança inicial.
- * @param {string} sourceText - Texto fonte para validação.
- * @returns {Object|null} Conclusão validada ou null se rejeitada.
- */
-function anchorEvidence(finding, sourceText) {
-  const initialConfidence = finding.confidence || 0.5;
-  const quote = finding.quote;
-
-  // Caso 1: Citação ausente
-  if (!quote || quote.trim() === '') {
-    return {
-      ...finding,
-      confidence: initialConfidence * 0.5,
-      anchoringStatus: 'UNANCHORED_NO_QUOTE'
-    };
-  }
-
-  // Caso 2: Citação muito curta
-  if (quote.length < 15) {
-    return {
-      ...finding,
-      confidence: initialConfidence * 0.7,
-      anchoringStatus: 'WEAK_SHORT_QUOTE'
-    };
-  }
-
-  // Caso 3: Citação padrão - aplicar trigram overlap + Levenshtein
-  const similarity = computeMaxSimilarity(quote, sourceText);
-
-  // Discard threshold
-  if (similarity < EVIDENCE_DISCARD_THRESHOLD) {
-    return null; // Hallucinação potencial - descartar
-  }
-
-  // Confidence modulation
-  let modulatedConfidence = initialConfidence;
-  if (similarity >= 0.70) {
-    modulatedConfidence = initialConfidence + (1 - initialConfidence) * 0.5;
-  } else if (similarity >= 0.45) {
-    const penalty = (0.70 - similarity) / 0.25;
-    modulatedConfidence = initialConfidence * (1 - penalty * 0.35);
-  }
-
-  // Confidence filter
-  if (modulatedConfidence < CONFIDENCE_MIN_THRESHOLD) {
-    return null;
-  }
-
-  return {
-    ...finding,
-    confidence: modulatedConfidence,
-    similarity: similarity,
-    anchoringStatus: 'ANCHORED'
-  };
-}
-
-/**
- * Calcula a similaridade máxima entre uma citação e o texto fonte,
- * utilizando trigram overlap como pre-filter e Levenshtein normalizado.
- * @param {string} quote - Citação a verificar.
- * @param {string} sourceText - Texto fonte.
- * @returns {number} Similaridade máxima (0 a 1).
- */
-function computeMaxSimilarity(quote, sourceText) {
-  const quoteTrigrams = getTrigrams(quote);
-  if (quoteTrigrams.length === 0) return 0;
-
-  const windowSize = quote.length;
-  let maxSimilarity = 0;
-
-  for (let i = 0; i <= sourceText.length - windowSize; i++) {
-    const window = sourceText.substring(i, i + windowSize);
-    const overlap = computeTrigramOverlap(quoteTrigrams, getTrigrams(window));
-
-    if (overlap < TRIGRAM_OVERLAP_THRESHOLD) continue;
-
-    const similarity = computeNormalizedLevenshtein(window, quote);
-    if (similarity > maxSimilarity) {
-      maxSimilarity = similarity;
-    }
-  }
-
-  return maxSimilarity;
-}
-```
-
-### 4.4. Implementação do Motor de Loop
-
-O motor de loop é a função principal executada periodicamente por um *trigger* temporizado. Ele coordena todo o ciclo de vida das tarefas:
-
-```javascript
-/**
- * @fileoverview LoopEngine - Motor principal do sistema de Loop Engineering.
- * Executado por Time-Driven Triggers (ex: a cada 15 minutos).
- * 
- * Segue os princípios IV (Desempenho) e I (Disciplina) da Spec Kit.
- */
-
-/** @const {number} Tempo máximo de execução antes de parar (5 minutos) */
-const LOOP_MAX_RUNTIME_MS = 5 * 60 * 1000;
-
-/**
- * Função principal do motor de loop, executada por um trigger.
- * Coordena descoberta, execução, validação e consolidação.
- */
-function runLoopEngine() {
-  const startTime = Date.now();
-  const stateDAO = new StateDAO('State');
-  const configDAO = new ConfigDAO('Config');
-
-  // Fase 1: Descoberta e Triage
-  const pendingTasks = stateDAO.getPendingTasks();
-  if (pendingTasks.length === 0) {
-    Logger.log('No pending tasks. Loop idle.');
-    return;
-  }
-
-  // Ordenar por prioridade (menor número = maior prioridade)
-  pendingTasks.sort((a, b) => a.priority - b.priority);
-
-  // Fase 2: Execução sequencial com limite de tempo
-  for (const task of pendingTasks) {
-    // Verificar limite de tempo de execução
-    if (Date.now() - startTime > LOOP_MAX_RUNTIME_MS) {
-      Logger.log('Runtime limit reached. Resuming in next cycle.');
-      break;
-    }
-
-    // Obter registacção da tarefa
-    const registryEntry = Registry.get(task.type);
-    if (!registryEntry) {
-      Logger.log(`Unknown task type: ${task.type}. Skipping.`);
-      continue;
-    }
-
-    // Fase 3: Acção
-    const agent = new registryEntry.agentClass();
-    const result = agent.execute(task);
-
-    // Fase 4: Verificação (Maker-Checker)
-    const verifier = new registryEntry.verifierClass();
-    const verifiedResult = verifier.validate(result, task);
-
-    // Fase 5: Evidence Anchoring
-    const anchored = anchorEvidence(verifiedResult, task.sourceData);
-
-    if (anchored) {
-      // Consolidar no DAO de saída
-      registryEntry.outputDAO.safeUpsert([anchored]);
-      registryEntry.evidenceDAO.safeUpsert([{
-        taskId: task.id,
-        findingId: anchored.findingId,
-        evidence: anchored.quote,
-        confidence: anchored.confidence,
-        status: anchored.anchoringStatus,
-        timestamp: new Date().toISOString()
-      }]);
-      stateDAO.completeTask(task.id);
-    } else {
-      stateDAO.failTask(task.id, 'Evidence anchor rejected');
-    }
-  }
-}
-```
-
-### 4.5. Registo de Configuração e Tarefas
-
-O registo central mapeia cada tipo de tarefa ao seu agente, verificador e DAOs:
-
-```javascript
-/**
- * @fileoverview Registry - Registo central de tarefas e componentes.
- * Fonte única da verdade para mapeamento task-type -> componentes.
- * Segue o Princípio I da Spec Kit: registry-driven architecture.
- */
-
-const LOOP_REGISTRY = {
-  'code-review': {
-    agentClass: CodeReviewerAgent,
-    verifierClass: CodeReviewVerifier,
-    inputDAO: TaskDAO,
-    outputDAO: ReviewResultDAO,
-    evidenceDAO: AgentLogDAO,
-    maxRetries: 3,
-    timeoutMs: 240000, // 4 minutos
-    priority: 1
-  },
-  'test-validation': {
-    agentClass: TestValidatorAgent,
-    verifierClass: TestVerifier,
-    inputDAO: TaskDAO,
-    outputDAO: TestResultDAO,
-    evidenceDAO: AgentLogDAO,
-    maxRetries: 2,
-    timeoutMs: 180000, // 3 minutos
-    priority: 2
-  },
-  'architectural-audit': {
-    agentClass: ArchitectureAuditorAgent,
-    verifierClass: ArchitectureVerifier,
-    inputDAO: TaskDAO,
-    outputDAO: AuditResultDAO,
-    evidenceDAO: AgentLogDAO,
-    maxRetries: 3,
-    timeoutMs: 300000, // 5 minutos
-    priority: 3
-  }
-};
-
-/**
- * Obtém a registacção de uma tarefa pelo tipo.
- * @param {string} taskType - Tipo da tarefa.
- * @returns {Object|null} Registo ou null se não encontrado.
- */
-Registry.get = function(taskType) {
-  return LOOP_REGISTRY[taskType] || null;
-};
-
-/**
- * Lista todos os tipos de tarefas registados.
- * @returns {string[]} Array de tipos de tarefas.
- */
-Registry.list = function() {
-  return Object.keys(LOOP_REGISTRY);
-};
-
-/**
- * Valida a integridade do registo (sem duplicatas).
- * Segue o princípio de "duplicate keys MUST fail loudly".
- * @throws {Error} Se forem detectadas duplicatas.
- */
-Registry.validate = function() {
-  const keys = Object.keys(LOOP_REGISTRY);
-  const uniqueKeys = new Set(keys);
-  if (keys.length !== uniqueKeys.size) {
-    throw new Error(
-      'Registry contains duplicate keys. ' +
-      'Duplicate keys MUST fail loudly rather than silently override.'
-    );
-  }
-};
-```
-
-### 4.6. Ferramenta Python de Validação Lógica
-
-Além da implementação prevista para o runtime do Google Apps Script, foi implementada uma ferramenta local em Python em `tools/logical_validator.py`. A ferramenta materializa a parte verificável da proposta: recebe um texto-fonte e uma lista de achados em JSON, valida se cada citação existe no texto com similaridade suficiente, recalcula a confiança final e rejeita conclusões não ancoradas.
-
-O validador foi desenhado sem dependências externas, de modo compatível com os princípios de dependências mínimas e operação offline da Spec Kit. A interface de linha de comando separa a lógica importável da superfície de execução, permitindo que a mesma implementação seja usada por testes automatizados, scripts de CI ou uma etapa anterior à consolidação em Google Sheets.
-
-```bash
-python tools/logical_validator.py \
-  --source Relatorio.md \
-  --findings exemplos/achados_validacao.json \
-  --output validacao_logica.json
-```
-
-A entrada esperada é uma lista de achados, ou um objecto com a chave `findings`. Cada achado pode conter campos textuais (`claim`, `quote`, `confidence`, `severity`) e, opcionalmente, uma declaração lógica explícita (`subject`, `predicate`, `polarity`) usada para detectar contradições entre conclusões aceites.
-
-```json
-{
-  "findings": [
-    {
-      "id": "EV-001",
-      "claim": "A arquitectura usa Evidence Anchoring antes da persistência.",
-      "quote": "A camada de *Evidence Anchoring* valida as conclusões dos agentes antes de as consolidar.",
-      "confidence": 0.84,
-      "severity": "high",
-      "logic": {
-        "subject": "Evidence Anchoring",
-        "predicate": "validates_before_persistence",
-        "polarity": true
-      }
-    }
-  ]
-}
-```
-
-Internamente, a ferramenta executa quatro verificações:
-
-1. **Integridade estrutural:** confirma presença de claim, confiança numérica e severidade reconhecida.
-2. **Ancoragem textual:** aplica normalização, pré-filtro de trigramas e distância de Levenshtein normalizada.
-3. **Modulação de confiança:** penaliza citações ausentes ou curtas e rejeita achados abaixo de 0.65.
-4. **Consistência lógica:** marca duplicatas por impressão digital textual e contradições quando achados aceites declaram polaridades opostas para o mesmo par sujeito/predicado.
-
-O processo retorna código de saída `0` quando todos os achados passam e `1` quando há rejeições, erros ou contradições, o que permite integrar a validação em *quality gates* automatizados.
-
-Durante a verificação da ferramenta foi identificado e corrigido um defeito específico da plataforma Windows: o `stdout` nativo da consola usa por omissão uma *codepage* limitada (ex. cp1252), incapaz de representar caracteres fora do seu repertório. Como o próprio texto-fonte deste relatório contém símbolos fora desse repertório (ex. os marcadores ☑/☐ da Tabela da secção 5.3), qualquer achado cujo `claim` referencie esse tipo de conteúdo fazia o CLI terminar com `UnicodeEncodeError` ao imprimir em `--format json`, um crash não distinguível de uma reprovação de validação para quem lê apenas o código de saída. A função `main()` passou a reconfigurar `stdout`/`stderr` para UTF-8 no arranque, e o comportamento é coberto por um teste de regressão que simula uma consola com codificação restrita.
-
----
-
-## 5. Avaliação e Discussão
-
-### 5.1. Coerência Arquitectural
-
-A arquitectura proposta demonstra coerência com os princípios da Spec Kit [2]. A separação entre *entry points* e lógica importável é garantida pela camada de interface (doGet/doPost/triggers) que delega toda a lógica às camadas inferiores. O padrão *registry-driven* garante que a adicção de novas tarefas não exige modificações no motor de loop, respeitando o princípio de minimalidade de dependências.
-
-A abordagem de *Evidence Anchoring* fornece uma barreira de confiança determinista entre a execução e a persistência, mitigando o risco de alucinações que seria particularmente problemático num sistema autónomo que opera sem supervisação humana directa.
-
-A ferramenta Python reforça esta coerência porque transforma uma regra arquitectural em artefacto executável: o mesmo critério descrito no relatório pode ser aplicado a exemplos, achados produzidos por agentes e futuras saídas do loop. Na validação local, o exemplo `exemplos/achados_validacao.json` foi aprovado contra `Relatorio.md`, demonstrando que a ancoragem textual é reprodutível fora do ambiente GAS.
-
-### 5.2. Operação dentro das Restrições do GAS
-
-O sistema é desenhado para operar dentro dos limites operacionais do Google Apps Script. O limite de 6 minutos por invocação de *trigger* é gerido através da verificação de tempo de execução no motor de loop, que interrompe o processamento quando restam apenas 60 segundos do limite. As cotas de acesso ao `SpreadsheetApp` são minimizadas através de *lazy loading* com *cache* e da concentração de operações de leitura/escrita em lotes (*batch operations*).
-
-### 5.3. Comparacção com Abordagens Existentes
-
-A tabela abaixo compara a abordagem proposta com alternativas existentes:
-
-| Dimensão | DAO Simples em GAS | CAPRA [3] | Proposta (DAO + Loop Engineering) |
-|---|---|---|---|
-| **Abstração de Dados** | ☑ | ☐ (usa Python) | ☑ (DAOs tipados) |
-| **Orquestração Multi-Agente** | ☐ | ☑ | ☑ |
-| **Evidence Anchoring** | ☐ | ☑ | ☑ |
-| **Validação lógica executável** | ☐ | ☑ | ☑ (Python local sem dependências externas) |
-| **Autonomia (Loop)** | ☐ | ☐ (processamento batch) | ☑ (triggers periódicos) |
-| **Registry-Driven** | ☐ | ☐ | ☑ |
-| **Ambiente** | Google Apps Script | Python/Spring AI | Google Apps Script |
-| **Persistência** | Google Sheets | Base de dados relacional | Google Sheets |
-| **Maker-Checker** | ☐ | ☑ (ConsistencyManager) | ☑ (VerifierAgent) |
-
-### 5.4. Limitações
-
-O sistema proposto apresenta algumas limitações inerentes à plataforma Google Apps Script. A ausência de um *framework* de testes nativo obriga a que os testes sejam implementados manualmente, utilizando *asserts* básicos. A dependência do Google LLM (através do serviço `LanguageApp` ou integração com API externa) introduz custos e limitações de quota. Finalmente, o *trigram overlap* e a distância de Levenshtein em JavaScript puro podem ser computacionalmente intensivos para textos muito longos, embora sejam adequados para a escala típica de Google Sheets.
-
-A ferramenta Python reduz o risco de validação tardia, mas não substitui a validação em runtime no GAS. Ela opera sobre texto-fonte e achados serializados em JSON; portanto, a qualidade da verificação depende da qualidade das citações extraídas pelos agentes e da explicitação opcional das relações lógicas. Contradições sem `subject`, `predicate` e `polarity` continuam exigindo revisão humana ou regras semânticas adicionais.
-
----
-
-## 6. Conclusão
-
-A arquitectura apresentada neste relatório demonstra que é possível combinar o padrão Data Access Object, a disciplina arquitectural da Spec Kit e a orquestração multi-agente com *Evidence Anchoring* num sistema coerente e operacionál em Google Apps Script para suporte de fluxos de Loop Engineering.
-
-O sistema proposto transforma o Google Sheets numa base de dados persistente e auditável para agentes de IA autónomos, permitindo que ciclos de acção e feedback sejam executados periodicamente sem intervenção humana directa. A camada de *Evidence Anchoring* garante que apenas conclusões verificadas são consolidadas, mitigando o risco de alucinações. A separação *maker-checker* entre agentes de execução e agentes de verificação reforça a fiabilidade do sistema.
-
-A ferramenta Python de validação lógica acrescenta ao trabalho um ponto de controlo executável e reprodutível. Ela permite testar a ancoragem de evidências fora do GAS, auditar achados antes da persistência e transformar parte da argumentação arquitectural em verificação automatizada.
-
-Os princípios da Spec Kit [2] — separação de camadas, registos como fonte única da verdade, tipagem rigorosa e operações idempotentes — proporcionam a disciplina arquitectural necessária para manter o sistema manutenível e extensível, mesmo no ambiente limitado do Google Apps Script.
-
----
-
-## 7. Referências
-
-[1] Osmani, A. (2026). *Loop Engineering*. Addy Osmani Blog. Disponível em: https://addyosmani.com/blog/loop-engineering/
-
-[2] Spec Kit Team. (2026). *Spec Kit Constitution v1.0.0* (base.txt). Spec Kit Repository. Disponível em: https://github.com/github/spec-kit
-
-[3] Becattini, M., Caselli, N., Minin, M., Verdecchia, R., & Vicario, E. (2026). *CAPRA: Scaling Feedback on Software Architecture Deliverables with a Multi-Agent LLM System* (paper.txt).
-
-[4] Oracle. (s.d.). *Data Access Object Design Pattern*. Oracle Java Documentation. Disponível em: https://www.oracle.com/java/technologies/data-access-object.html
-
-[5] Google. (s.d.). *Google Apps Script*. Google for Developers. Disponível em: https://developers.google.com/apps-script
+BLOCKCHAIN E CREDENCIAIS ACADÊMICAS VERIFICÁVEIS: ANÁLISE COMPARADA DE MATURIDADE INSTITUCIONAL E DESAFIOS PARA A EDUCAÇÃO IBERO-AMERICANA
+
+Hélio Craveiro Pessoa Júnior1  
+
+Resumo:
+Este trabalho examina, em perspectiva comparada, a maturidade de projetos de blockchain de código aberto aplicados à certificação e às credenciais acadêmicas. O objetivo é identificar quais iniciativas apresentam evidências de adoção, governança e manutenção suficientes para orientar decisões educacionais, distinguindo-as de protótipos de pesquisa ou demonstração. A metodologia combina revisão documental e técnica de 28 projetos listados em repositórios públicos, complementada por dois casos educacionais alinhados a credenciais verificáveis, com verificação de atividade e evidências de uso na API do GitHub. Para reduzir a dependência de autodescrições dos projetos, foi implementado um validador que consulta o arXiv e deixa configurada a consulta à API v2 do X como fonte auxiliar. A comparação organiza-se em dois níveis: no plano intersetorial, contrasta educação, ambiente e saúde; no plano institucional, compara os modelos estatal, supranacional e de fundação/consórcio. O referencial teórico articula literatura sobre credenciais verificáveis, governança de bens digitais comuns e proteção de dados pessoais. Os resultados indicam assimetria relevante entre setores. O campo ambiental reúne os exemplos com adoção institucional mais documentada; o setor sanitário permanece concentrado em protótipos; e o campo educacional deslocou seu centro de gravidade dos certificados ancorados em blockchain para arquiteturas de credenciais verificáveis do W3C. Conclui-se que o uso educacional da tecnologia depende menos da cadeia escolhida e mais de governança, auditabilidade, conformidade regulatória e baixo custo operacional. A contribuição do estudo é oferecer critérios comparados para pesquisa, ensino e formulação de políticas de credenciais na Ibero-América.
+Palavras-chave: Educação comparada; Credenciais acadêmicas verificáveis; Blockchain; Governança educacional; Ibero-América.
+1 Professor na Secretaria de Educação do Distrito Federal e mestrando pelo Programa de Pós-Graduação em Educação da Universidade de Brasília, pessoajr@gmail.com.
+Introdução
+Este trabalho toma a certificação acadêmica digital como objeto de análise comparada. A pergunta orientadora é de política educacional: entre as arquiteturas de blockchain de código aberto e de credenciais verificáveis hoje disponíveis, quais alcançaram maturidade institucional suficiente para orientar decisões de sistemas educativos, e o que a sua trajetória ensina aos países ibero-americanos que ainda desenham suas políticas de credenciais e de reconhecimento de diplomas?
+Para responder a essa pergunta, o estudo adota um desenho comparado em dois eixos. No eixo intersetorial, o campo educacional é confrontado com os setores ambiental e sanitário, que apresentam graus distintos de adoção institucional. No eixo cross-nacional, comparam-se, dentro do próprio campo educacional, os modelos de governança das iniciativas com adoção documentada: o modelo estatal (Singapura), o modelo supranacional (União Europeia) e o modelo de fundação/consórcio (Estados Unidos). Dessa dupla comparação extraem-se implicações para a Ibero-América.
+A lógica dessa comparação é sintetizada na Figura 1, que organiza os setores sanitário, educacional e ambiental em um eixo de maturidade institucional, distinguindo protótipos demonstrativos de infraestruturas com adoção externa e governança verificável.
+Figura 1 - Maturidade institucional comparada
+
+Fonte: Elaborada pelo autor (2026).
+A base empírica é uma análise documental e técnica de 28 projetos listados em repositórios públicos, aos quais se somam dois casos educacionais complementares (Learner Credential Wallet e OpenCerts). Os dados de atividade, status de arquivamento e condição de fork foram verificados diretamente na API do GitHub em 5 de julho de 2026. A classificação privilegia evidências auditáveis: atividade de repositório, governança, documentação, releases, uso institucional e sinais externos verificáveis.
+Projetos Blockchain Open Source Avaliados
+A Tabela 1 apresenta os 28 projetos identificados no levantamento, com avaliação de adoção em produção (S = evidência de uso documentado por organização externa; N = protótipo/prova de conceito; P = piloto/demonstrador institucional).
+Tabela 1 – Projetos de blockchain de código aberto por setor e nível de adoção em produção
+Nome do Projeto	Setor	Descrição	Forks	Adoção em produção
+Energy Web Origin	Ambiental	SDK para emissão e gestão de Certificados de Atributos de Energia (EACs).	60	S – base de implantações do ecossistema Energy Web com utilities europeias; ~35 contribuidores
+Toucan Protocol Contracts	Ambiental	Contratos da ponte de créditos de carbono Toucan. Repositório é um espelho (mirror), não o repositório de desenvolvimento.	31	S – protocolo em uso on-chain, com ressalvas sobre tokenização
+Hedera Guardian	Ambiental	Motor de políticas open source para digitalizar metodologias ESG/dMRV.	182	S – Verra (Project Hub, 20+ metodologias), Gold Standard (créditos de fogões eCook Bangladesh emitidos em 2026), UNDP, EcoMarkets Australia; ~68 contribuidores
+Regen Ledger	Ambiental	Blockchain Cosmos-SDK para regeneração planetária.	115	S – mainnet Regen Network operante com créditos ecológicos emitidos; ~38 contribuidores
+KlimaDAO dApp	Ambiental	Monorepo da infraestrutura de finanças climáticas KlimaDAO.	72	S – dApp em produção, com ressalvas sobre tokenização; ~35 contribuidores
+IBM Medical-Blockchain	Sanitário	Plataforma de gestão de dados de saúde em blockchain (code pattern).	94	N – code pattern demonstrativo da IBM, não produto
+ehr-blockchain	Sanitário	EHR descentralizado com Ethereum, Solidity, IPFS e MetaMask.	55	N – protótipo mantido ativamente, mas ~2 contribuidores
+Blockchain-Healthcare-System	Sanitário	Sistema BPJS com blockchain para registros médicos.	0	N
+BlockchainEducation	Educacional	Aplicação de blockchain na educação.	0	N
+OERchains	Educacional	Ecossistema para recursos educacionais abertos no Ethereum.	0	N
+Decentralized-Federated-Learning	Sanitário	Aprendizado federado descentralizado com consenso blockchain (saúde/IoT).	0	N – framework de pesquisa
+SwasthyaChain	Sanitário	Gestão de prontuários eletrônicos com regras granulares. Fork.	39	N
+Blockchain-Healthcare-Project	Sanitário	Controle de acesso seguro para hospitais e registros.	2	N
+Switchboard dApp	Ambiental	UI de identidade e acesso para ativos de energia.	14	S – componente do stack Energy Web em uso
+IOTA DPP Demonstrator	Ambiental	Implementação de referência de Passaporte Digital de Produto.	1	P – demonstrador oficial da IOTA Foundation para pilotos ESPR
+meDossier	Sanitário	Armazenamento descentralizado de registros médicos (blockchain + IPFS).	2	N
+Secure-Electronic-Health-Records	Sanitário	Upload seguro de dados médicos baseado em Ethereum.	17	N
+Decentralized-Personal-Health-Record	Sanitário	Gestão individual de dados de saúde via blockchain.	15	N
+AI-Blockchain-EHR	Sanitário	Gestão de prontuários eletrônicos com IA + blockchain.	37	N
+Blockcerts (cert-issuer)	Educacional	Padrão aberto para emissão e verificação de certificados em blockchain.	217	S – certificados emitidos por instituições identificáveis desde 2017 (MIT esteve entre os primeiros emissores); ~26 contribuidores
+MedRec	Sanitário	Sistema descentralizado de registros de saúde (MIT Media Lab).	91	N – protótipo histórico, sem produção
+chaincred	Educacional	Verificação de credenciais acadêmicas no Ethereum.	0	N
+AI-HealthCare-Assistant	Sanitário	Assistente de saúde com IA + registros médicos em blockchain.	54	N – ~7 contribuidores, sem uso institucional conhecido
+Blockchain_SupplyChain	Sanitário	Cadeia de suprimentos farmacêutica em blockchain.	50	N
+Track-Pharma	Sanitário	Cadeia de suprimentos farmacêutica baseada em blockchain.	9	N
+MediChain	Sanitário	Cadeia de suprimentos farmacêutica no Ethereum.	2	N
+Healthcare-Data-Sharing	Sanitário	Compartilhamento seguro de dados de saúde (blockchain híbrido).	2	N
+EduChain Connect	Educacional	Plataforma de credenciais educacionais sobre o ecossistema Stacks.	0	N
+Fonte: Elaborada pelo autor a partir de dados da API do GitHub (2026).
+No setor educacional, o levantamento dependia quase exclusivamente do Blockcerts, sem contemplar o padrão que passou a reunir tração institucional em 2025: o W3C Verifiable Credentials 2.0, publicado como Recomendação W3C em maio daquele ano (W3C, 2025). A Tabela 2 acrescenta os dois projetos que preenchem essa lacuna.
+Tabela 2 – Projetos educacionais complementares alinhados ao padrão W3C Verifiable Credentials
+Nome	Setor	Descrição	Forks	Adoção em produção
+Learner Credential Wallet	Educacional	Carteira móvel (iOS/Android) para credenciais acadêmicas no padrão W3C VC. Criada pelo Digital Credentials Consortium (MIT Open Learning, com financiamento do Dep. de Educação dos EUA); custódia transferida em 2025 para a OpenWallet Foundation (Linux Foundation) (HIGUERA, 2025).	49	S – pilotos com universidades do consórcio DCC; governança de fundação
+OpenCerts	Educacional	Plataforma do governo de Singapura (GovTech/SkillsFuture) para certificados educacionais verificáveis ancorados em Ethereum.	71	S – produção nacional em Singapura: institutos de ensino emitem certificados verificáveis pelo público
+Fonte: Elaborada pelo autor (2026).
+A EBSI (European Blockchain Services Infrastructure, Comissão Europeia), embora sem repositório único de implantação, tornou-se em 2025 uma referência de infraestrutura de credenciais educacionais verificáveis na Europa, com integração à carteira de identidade digital europeia (EUDI Wallet) e casos transfronteiriços documentados (França via projeto fr.EBSI com Universidade de Lille; Bélgica–Itália) (BCDIPLOMA, 2024). Para a Ibero-América, ela funciona como parâmetro de arquitetura e governança, não como modelo a ser simplesmente transplantado.
+No setor sanitário, a busca por projetos ativos de 2025–2026 não encontrou candidato open source com adoção em produção. Os esforços institucionais migraram para trilhas sem blockchain (APIs HL7 FHIR, adotadas ou em adoção por ~84% dos provedores hospitalares dos EUA (GOVINDARAJAN et al., 2025)) ou para consórcios permissionados de código fechado.
+Validação externa por arXiv e X
+Além da verificação por GitHub, foi implementado o script `validar\_robustez.py`, configurado em `projetos\_robustez.json`, para consultar sinais externos de robustez dos 28 projetos da Tabela 1. O validador usa a API pública do arXiv (ARXIV, 2026) e a API v2 de busca recente do X (X DEVELOPER PLATFORM, 2026), com chave configurável por `X\_BEARER\_TOKEN`.
+Na execução de 9 de julho de 2026, a busca no arXiv retornou menções específicas apenas para Blockcerts (2 resultados específicos em 3 resultados brutos). Os demais projetos não apresentaram menção específica pelo nome do projeto; em alguns casos, como "Decentralized-Federated-Learning" e "Healthcare-Data-Sharing", houve resultados brutos relacionados ao tema, mas sem referência ao repositório ou iniciativa avaliada. Por isso, o arXiv foi tratado como sinal complementar, não como critério suficiente de adoção.
+A consulta ao X ficou preparada no validador, mas não foi executada nesta versão porque não havia `X\_BEARER\_TOKEN` configurado no ambiente. Assim, nenhuma classificação de robustez foi alterada por menções em rede social. Quando executada com credencial válida, a busca no X deve ser lida como indicador de circulação pública recente, e não como prova de uso em produção.
+Análise de maturidade: o que as métricas de GitHub não mostram
+Em linha com a tendência dos estudos comparados recentes sobre software livre — que substituem métricas de popularidade (estrelas, forks) por indicadores multidimensionais de saúde de projeto: atividade de commits, número e concentração de mantenedores, cadência de releases e governança —, a análise a seguir prioriza sinais de sustentação sobre sinais de visibilidade. Lida sob essa ótica, a contagem de contribuidores separa os projetos em duas classes distintas:
+Classe 1 – Infraestrutura institucional com comunidade identificável. Hedera Guardian (~68 contribuidores), Regen Ledger (~38), Energy Web Origin (~35), KlimaDAO (~35) e Blockcerts cert-issuer (~26) têm organizações responsáveis (Hashgraph/HBAR Foundation, Regen Network, Energy Web Foundation, fundação Blockcerts), documentação, releases versionados e, em parte dos casos, evidências públicas de adoção. No caso do Guardian, a Verra integrou o software ao Project Hub para digitalizar mais de 20 metodologias de carbono (VERRA, 2025), a Gold Standard emitiu em março de 2026 créditos de fogões eficientes digitalizados via Guardian (projeto eCook Bangladesh, com telemetria IoT) (HASHGRAPH, 2026), e o UNDP mantém seu National Carbon Registry sobre a mesma base. Aqui, adoção em produção significa dependência operacional por organizações externas ao desenvolvedor.
+Classe 2 – Protótipos e repositórios de baixa institucionalização. A maior parte dos projetos sanitários da lista (ehr-blockchain com ~2 contribuidores, e os demais com números similares ou menores) e os educacionais pequenos são trabalhos acadêmicos ou de portfólio: poucos autores — um fator de ônibus (bus factor) baixo, com frequência unitário, que sinaliza risco direto de descontinuidade —, sem releases, sem testes de integração visíveis, sem auditoria de contratos e sem organização usuária identificada. São úteis como referência de arquitetura (o padrão hash-on-chain + IPFS está bem representado), mas não devem ser tratados como candidatos a implantação. A diferença entre essas classes sustenta a classificação: métricas simples de estrelas (ex.: AI-Blockchain-EHR, com 114 estrelas, mas sem commit desde 2023) não capturam governança, manutenção e uso institucional.
+Nota sobre auditorias de contratos: nenhum dos repositórios da Classe 2 apresenta auditoria de segurança de smart contracts. Nos projetos da Classe 1 que operam valor on-chain (Toucan, KlimaDAO), auditorias existem no histórico dos protocolos, mas o repositório da Toucan listado aqui é explicitamente um mirror.
+Limitações metodológicas
+A leitura comparada acima observa limites que condicionam sua interpretação, em linha com as boas práticas de transparência dos estudos de software livre. Primeiro, as métricas de GitHub são indicadores indiretos (proxies) de maturidade: capturam atividade e comunidade, não qualidade de código ou segurança de contratos. Segundo, a amostra não é probabilística — parte de repositórios públicos localizáveis por busca —, de modo que iniciativas de código fechado ou permissionadas ficam fora do enquadramento. Terceiro, os sinais externos triangulados são complementares e assimétricos: o arXiv mede indexação acadêmica (com menção específica apenas ao Blockcerts) e a consulta ao X ficou configurada, mas não executada nesta versão. Quarto, os dados constituem um retrato datado (API do GitHub em 5 de julho de 2026; validador externo em 9 de julho de 2026), e a heterogeneidade de licenças entre os projetos não foi sistematizada como dimensão própria. Essas ressalvas não invalidam a distinção entre adoção institucional e prototipagem, mas delimitam seu alcance.
+Riscos regulatórios e de conformidade
+Os riscos regulatórios condicionam diretamente a adoção – dimensão importante tanto para credenciais educacionais quanto para dados de saúde, e frequentemente subestimada nos protótipos acadêmicos.
+1. GDPR/LGPD e o desenho hash-on-chain (impacto direto nos projetos sanitários)
+Em abril de 2025, o Conselho Europeu de Proteção de Dados (EDPB) publicou as Diretrizes 02/2025 sobre processamento de dados pessoais em blockchains (EUROPEAN DATA PROTECTION BOARD, 2025), um dos pronunciamentos regulatórios mais relevantes sobre o tema. Três pontos afetam diretamente os projetos aqui analisados:
+Hash de dado pessoal continua sendo dado pessoal. O EDPB é explícito: dados criptografados ou hasheados permanecem sujeitos ao GDPR. O desenho hash-on-chain usado por quase todos os projetos de EHR da lista não retira os dados do escopo regulatório – apenas mitiga o risco. Hashes de dados de saúde devem usar sal secreto ou compromissos criptográficos, nunca hash simples.
+Recomendação oficial: não armazenar dado pessoal on-chain; manter dados off-chain com referência não identificadora na cadeia. Os projetos que seguem esse desenho estão alinhados à orientação; os que gravam metadados identificáveis on-chain (vários protótipos acadêmicos gravam endereços de paciente vinculáveis) estão em desacordo.
+Direito ao apagamento: o EDPB aceita que dados on-chain sejam considerados efetivamente anonimizados após um pedido de apagamento somente se o dado off-chain que permitiria reidentificação for apagado e o registro on-chain não identificar diretamente ninguém. Isso exige governança do lado off-chain que nenhum protótipo da lista implementa.
+A LGPD brasileira segue lógica análoga (dado pseudonimizado continua pessoal, art. 13 §4º), de modo que as mesmas conclusões valem para implantações no Brasil.
+2. Enquadramento de tokens de carbono
+A proibição, pela Verra, da tokenização de créditos aposentados (2022) foi parcialmente revista: a entidade propôs um mecanismo de "imobilização" de créditos em subcontas do registro (o crédito fica travado até ser aposentado ou o token ser queimado) e abriu consulta pública com exigências de KYC, porém até o início de 2025 não havia formalizado o framework (VERRA, 2022). Em paralelo, a Verra firmou parceria com a Hedera para digitalizar seu registro via Guardian (VERRA, 2025). A diferença entre esses movimentos é relevante: a certificadora restringiu a tokenização por terceiros (modelo Toucan/KlimaDAO) e adotou uma trilha digital sob governança própria (modelo Guardian).
+3. Passaporte Digital de Produto (ESPR)
+A regulação europeia ESPR segue sendo um vetor importante de demanda institucional para rastreabilidade – o demonstrador da IOTA listado acima permanece implementação de referência ativa (Apache-2.0, atualizado em 2026-03).
+Repercussões Acadêmicas e Pesquisadores Influentes
+A análise da literatura acadêmica e das discussões de pesquisadores influentes revela tendências recorrentes na aplicação do blockchain nos setores ambiental, sanitário e educacional.
+1. Contexto Ambiental e Sustentabilidade
+O blockchain tem sido discutido como ferramenta para integridade de dados, relatórios de sustentabilidade e coordenação entre partes interessadas (VACCARGIU; TONELLI, 2024). Revisões bibliométricas recentes identificam pesquisadores influentes – entre eles Tsan-Ming Choi, com trabalhos sobre blockchain em cadeias de suprimentos e ação climática – e mostram que a pesquisa evoluiu de um foco financeiro para aplicações em contabilidade de carbono e rastreabilidade de cadeias de suprimentos verdes (SCIENCEDIRECT, 2025; PARMENTOLA et al., 2022). O World Economic Forum (WEF) também tem destacado o potencial do blockchain para ação climática (TOUCAN, 2023). Em 2025–2026, a literatura passou a contar com exemplos de produção: a digitalização de metodologias pela Verra (VERRA, 2025) e a emissão de créditos digitais pela Gold Standard (HASHGRAPH, 2026) indicam que o dMRV deixou de ser apenas hipótese acadêmica em parte desse setor.
+2. Contexto Sanitário
+No setor da saúde, o blockchain é visto como uma solução para desafios de interoperabilidade e segurança de dados (ELANGOVAN et al., 2022). Um precedente relevante foi o projeto Verifiable Data Audit do DeepMind Health (2017), sistema de auditoria de logs inspirado em blockchain – embora não seja um blockchain propriamente dito, e o DeepMind Health tenha sido absorvido pelo Google Health em 2019 (SULEYMAN; LAURIE, 2017). Desde as primeiras discussões do setor, argumenta-se que o blockchain pode resolver a fragmentação de dados entre provedores (BRYANT, 2016), e estudos recentes exploram integração com IoT e IA (ABBAS et al., 2026).
+Baixa conversão da saúde: por que 10+ anos de literatura não viraram produção
+O setor sanitário é concentrado em protótipos acadêmicos sem adoção em produção. Uma revisão sistemática de implementações blockchain em saúde (SHAIKH et al., 2025) e um estudo sobre o ciclo de hype da adoção (GOVINDARAJAN et al., 2025) convergem em quatro causas para esse padrão:
+O problema de integração é maior que o problema de confiança. EHRs legados (Epic, Cerner e equivalentes) não foram desenhados para interagir com blockchain; a integração exige modificações caras que nenhum protótipo acadêmico enfrenta – os protótipos assumem um mundo greenfield que não existe em hospital nenhum.
+O concorrente venceu por ser mais simples. A interoperabilidade que motivou o MedRec em 2016 está sendo resolvida por APIs HL7 FHIR – ~84% dos provedores hospitalares dos EUA já as adotam ou planejam adotar (GOVINDARAJAN et al., 2025) – sem custo de consenso distribuído.
+Regulação assimétrica. GDPR/LGPD/HIPAA tratam dado de saúde como categoria especial; as Diretrizes EDPB 02/2025 (EUROPEAN DATA PROTECTION BOARD, 2025) confirmam que hash on-chain de dado pessoal continua no escopo do GDPR. Para um hospital, o blockchain adiciona superfície regulatória em vez de reduzi-la.
+Incentivo acadêmico ≠ incentivo de manutenção. Os protótipos são artefatos de publicação ou de portfólio; publicado o artigo (ou concluído o TCC), muitos repositórios deixam de receber manutenção. Esse é o padrão observado na tabela: vários projetos têm um autor, um período curto de commits e depois baixa atividade.
+A implicação prática: no setor sanitário, o valor desta lista é sobretudo pedagógico e arquitetural (o padrão hash-on-chain + IPFS + controle de acesso está bem documentado nos protótipos), não operacional. Quem precisa de interoperabilidade de dados de saúde em produção hoje deve considerar FHIR primeiro e blockchain apenas para o caso mais estreito de trilha de auditoria multipartes.
+3. Contexto Educacional
+No campo da educação, a discussão sobre blockchain concentrou-se na descentralização e na verificação de credenciais acadêmicas. McGreal (2023) discute micro-credenciais e descentralização via blockchain. Estudos já apontavam o potencial inicial da certificação de graus baseada em blockchain (EL KOSHIRY et al., 2023). O conceito de "aprendizado blockchain" enfatiza o controle do estudante sobre suas conquistas acadêmicas (STEIU, 2020).
+A atualização relevante de 2025–2026 é a mudança do modelo "certificado ancorado em blockchain pública" (Blockcerts) para o modelo W3C Verifiable Credentials 2.0 (Recomendação W3C, maio de 2025) (W3C, 2025). Nesse modelo, o blockchain é opcional: a verificação depende da assinatura criptográfica do emissor, com ancoragem em cadeia usada, quando necessário, para registros de emissores ou revogação. O Blockcerts permanece ativo (última atualização 2026-04), mas hoje pode ser entendido como um perfil histórico dentro de um padrão mais amplo.
+Análise comparada dos modelos de governança de credenciais
+O ponto em questão não é apenas técnico, mas político-institucional: as três infraestruturas educacionais com adoção documentada convergem para o padrão W3C VC e diferem sobretudo no plano da governança. Comparando-as, distinguem-se três modelos, cada um com implicações distintas de soberania, custo e sustentabilidade (Tabela 3):
+Tabela 3 – Modelos de governança das infraestruturas educacionais de credenciais verificáveis
+Dimensão	Modelo estatal (OpenCerts, Singapura)	Modelo supranacional (EBSI, União Europeia)	Modelo de fundação/consórcio (Learner Credential Wallet, EUA)
+Quem governa	Agência de governo (GovTech/SkillsFuture)	Comissão Europeia + Estados-membros	Consórcio universitário (DCC/MIT) sob a OpenWallet Foundation (Linux Foundation) (HIGUERA, 2025)
+Âncora de confiança	Registro nacional de emissores	Rede EBSI + carteira de identidade europeia (EUDI Wallet) (BCDIPLOMA, 2024)	Registro de emissores mantido pela fundação
+Escopo	Nacional (certificados verificáveis pelo público)	Transfronteiriço (casos França–Bélgica–Itália) (BCDIPLOMA, 2024)	Rede de universidades participantes
+Soberania de dados	Alta (dado sob controle do Estado)	Compartilhada entre Estados-membros	Delegada à governança de fundação
+Risco de captura por ator único	Baixo (mas dependente de política de governo)	Baixo (governança multilateral)	Baixo (custódia transferida de indivíduo para fundação em 2025)
+Fonte: Elaborada pelo autor (2026).
+A comparação indica que a maturidade de uma tecnologia de credenciais depende da sua governança, não apenas da solução técnica. Esse critério separa as iniciativas adotáveis (EBSI, OpenCerts, LCW) dos protótipos de baixa institucionalização no restante da lista educacional (BlockchainEducation, OERchains, chaincred, EduChain Connect). Estes últimos podem ser úteis para estudo, mas não oferecem, sozinhos, base institucional para reconhecimento de diplomas. A passagem da Learner Credential Wallet, em 2025, para a OpenWallet Foundation (Linux Foundation) (HIGUERA, 2025) exemplifica o tipo de estabilização de governança que um sistema educativo deve observar antes de adotar uma infraestrutura.
+Tendência transversal: uso leve, baixas taxas e baixa especulação
+Um padrão comum atravessa os projetos com maturidade mais documentada neste levantamento: o blockchain é usado como camada fina de integridade e auditabilidade, e não como veículo financeiro. Três características definem esse uso "leve":
+Âncora de integridade, não repositório de dados. Praticamente todos os projetos de EHR listados seguem o desenho hash-on-chain: os dados ficam fora da cadeia (tipicamente em IPFS) e o blockchain registra apenas hashes e permissões. Isso minimiza custo por transação e evita expor dados sensíveis. Reforço regulatório: as Diretrizes EDPB 02/2025 (EUROPEAN DATA PROTECTION BOARD, 2025) recomendam esse desenho – dado off-chain, referência não identificadora on-chain – mas com a ressalva de que hash de dado pessoal continua sendo dado pessoal (ver seção de riscos regulatórios).
+Infraestruturas de taxa baixa ou nula. Os projetos com atividade documentada mais consistente rodam em redes onde o custo de transação é irrelevante para o caso de uso: Hedera Guardian (taxas fixas de fração de centavo), IOTA DPP (rede sem taxas), Regen Ledger (app-chain Cosmos com taxas mínimas), e as redes permissionadas Hyperledger/Energy Web (sem token especulativo). No ecossistema Ethereum, a viabilização do mesmo padrão vem dos rollups L2 pós-EIP-4844, com taxas abaixo de um centavo, e da account abstraction, que permite transações patrocinadas – o usuário final não precisa possuir criptomoeda.
+Adoção puxada por regulação e conformidade, não por especulação. O Passaporte Digital de Produto exigido pela regulação europeia ESPR e a digitalização de metodologias ESG exemplificam demanda institucional sem componente especulativo. A adoção do Guardian pela Verra, Gold Standard e UNDP (VERRA, 2025; HASHGRAPH, 2026) e a produção nacional do OpenCerts em Singapura indicam que essa trilha tem gerado uso verificável.
+Implicações para a educação ibero-americana
+Transposto o diagnóstico comparado para a realidade dos sistemas educativos ibero-americanos, cinco implicações se destacam, convertendo a análise técnica em agenda de política educacional para a região.
+Essas implicações são reunidas na Figura 2, que apresenta uma arquitetura de credenciais verificáveis para a Ibero-América baseada em padrão W3C VC, governança soberana, dados pessoais fora da cadeia e ancoragem mínima para emissores, revogação e auditoria.
+Figura 2 - Arquitetura de credenciais verificáveis
+
+Fonte: Elaborada pelo autor (2026).
+Reconhecimento de diplomas e mobilidade acadêmica regional. O problema recorrente do espaço ibero-americano – validar e reconhecer títulos entre Brasil, Portugal, Espanha e os países da América Latina – é semelhante ao enfrentado pela EBSI no plano europeu com credenciais verificáveis transfronteiriças (BCDIPLOMA, 2024). Instrumentos regionais de reconhecimento (a exemplo da Convenção Regional de Reconhecimento de Estudos da UNESCO para a América Latina e o Caribe) poderiam apoiar-se em credenciais W3C VC, reduzindo fraude documental e custo de apostilamento sem impor uma cadeia pública única.
+A escolha do modelo de governança é uma decisão soberana. A comparação estatal/supranacional/fundação não é neutra para a região. Um país ibero-americano que adote acriticamente uma carteira mantida por fundação estrangeira terceiriza a âncora de confiança dos seus próprios diplomas. O modelo OpenCerts (governança estatal sobre padrão aberto) tende a ser compatível com a soberania educacional de Estados nacionais, ao passo que uma EBSI regional demandaria coordenação multilateral que a Ibero-América ainda não possui em matéria de credenciais.
+Soberania de dados sob a LGPD e congêneres. As Diretrizes EDPB 02/2025 (EUROPEAN DATA PROTECTION BOARD, 2025) e a LGPD brasileira (dado pseudonimizado continua pessoal, art. 13 §4º) convergem numa orientação que a região deve internalizar: não gravar dado pessoal de estudante on-chain. O desenho adequado para credenciais educacionais mantém o dado sob controle da instituição emissora (off-chain), usando a cadeia apenas para registro de emissores e revogação. Isso protege o estudante e mantém a conformidade regulatória.
+Custo e infraestrutura: a favor da adoção leve. Sistemas educativos com orçamento restrito não podem depender de taxas de transação voláteis nem exigir que o egresso possua criptomoeda. O padrão que amadureceu – assinatura criptográfica do emissor, ancoragem mínima em cadeia de taxa baixa ou nula – tem custo operacional reduzido, o que o torna viável para redes públicas de ensino e para instituições da região.
+Equidade e risco de dependência tecnológica. Uma credencial só é inclusiva se puder ser verificada por qualquer empregador ou instituição sem software proprietário e se o estudante mantiver a posse do documento (carteira sob controle do titular). Padrões abertos (W3C VC) e código aberto com governança de fundação mitigam o risco de aprisionamento tecnológico (vendor lock-in), preocupação importante para países que não querem repetir, no domínio das credenciais, a dependência que já vivem em plataformas educacionais.
+Síntese para a região: a lição comparada não é "adotar blockchain", mas adotar o padrão de credenciais verificáveis com um modelo de governança soberano, desenho de dados conforme à LGPD e infraestrutura de baixo custo – tratando a ancoragem em cadeia como detalhe de implementação, não como fim em si.
+Recomendações priorizadas por setor
+Critérios: maturidade verificada (comunidade, releases, governança), evidência de adoção em produção e risco de abandono. Premissa: recursos limitados – 1 a 2 prioridades por setor. A leitura começa pelo setor educacional; o ambiental segue como parâmetro de maturidade a emular e o sanitário como alerta sobre o que impede a adoção.
+Educacional – consolidar a âncora emergente
+Learner Credential Wallet (MIT, OpenWallet Foundation) – primeira prioridade educacional. Reúne governança de fundação Linux Foundation, padrão W3C VC 2.0, pilotos universitários e financiamento público de origem.
+Blockcerts cert-issuer (MIT, ativo) – segunda prioridade: tem base histórica ampla no setor e segue mantido; novas emissões, porém, devem considerar compatibilidade com W3C VC 2.0/EBSI em vez do perfil Blockcerts puro.
+Acompanhar a EBSI como referência arquitetural mesmo sem adotá-la diretamente, e o OpenCerts (Singapura) como referência de governança estatal possível para Estados ibero-americanos (ver seção de implicações regionais).
+Ambiental – maturidade mais documentada
+Hedera Guardian (Apache-2.0, ~68 contribuidores) – primeira prioridade no setor ambiental. É o projeto da lista com adoção simultânea por múltiplas certificadoras e agências (Verra, Gold Standard, UNDP, EcoMarkets Australia) e demanda regulatória associada ao Artigo 6 do Acordo de Paris e ao dMRV. O risco de abandono é menor que o dos protótipos, pois há sustentação organizacional e uso operacional.
+Regen Ledger (~38 contribuidores, mainnet operante) – segunda prioridade. É uma blockchain focada em ativos ecológicos, com créditos emitidos on-chain e comunidade técnica associada ao ecossistema Cosmos.
+Sanitário – nenhum candidato a produção
+Não foi encontrado, na pesquisa de 2025–2026, nenhum projeto open source de blockchain-saúde com adoção em produção. Diante desse cenário, a recomendação é:
+shamil-t/ehr-blockchain (MIT, ativo até 2026-07) – apenas como referência de ensino e prototipagem do padrão hash-on-chain + IPFS. É o protótipo com manutenção mais recente na categoria.
+Decentralized-Federated-Learning (MIT, ativo) – como tema de pesquisa: a interseção aprendizado federado + blockchain para saúde trata de coordenação de treino multi-institucional sem compartilhamento de dados brutos, problema distinto da interoperabilidade clínica enfrentada pelo FHIR.
+Estratégia setorial: para interoperabilidade em produção, priorizar HL7 FHIR; reservar blockchain para trilha de auditoria multipartes e consentimento – e acompanhar consórcios permissionados em vez de protótipos Ethereum.
+Conclusão
+A comparação – intersetorial e cross-nacional – permite responder à pergunta que abriu este trabalho. No plano intersetorial, a maturidade é desigual, e essa desigualdade oferece um critério de leitura para a educação. O setor ambiental atravessou, entre 2025 e 2026, a fronteira da produção documentada em alguns casos – certificadoras (Verra, Gold Standard) e agências (UNDP) processam créditos sobre software de código aberto (Guardian) –, mostrando que maturidade institucional exige comunidade técnica, governança de organização e demanda regulatória. O setor sanitário permanece concentrado em protótipos: a interoperabilidade que o motivava está sendo entregue por padrões mais simples (HL7 FHIR) e a regulação de dados pessoais (EDPB 02/2025) encarece qualquer desenho on-chain. Esse é um alerta pertinente a quem, na educação, tentar gravar dados de estudantes na cadeia.
+O setor educacional situa-se entre os dois: encontrou sua trilha institucional no padrão W3C Verifiable Credentials 2.0, no qual o blockchain deixa de ser o fim e passa a ser, quando muito, uma camada opcional de ancoragem. No plano cross-nacional, a comparação dos três modelos de governança – estatal (OpenCerts/Singapura), supranacional (EBSI/União Europeia) e de fundação (LCW/DCC-OpenWallet Foundation) – indica que um fator relevante para uma credencial passível de adoção é a governança. Para sistemas educativos, a decisão relevante não é apenas "usar ou não blockchain", mas escolher um modelo de governança compatível com soberania, LGPD e infraestrutura de baixo custo.
+Para a Ibero-América, comparar é útil: os modelos europeu, singapurense e norte-americano oferecem experiências contrastantes a partir das quais a região pode desenhar – sem importar acriticamente – políticas próprias de credenciais verificáveis, reconhecimento de diplomas e mobilidade acadêmica. A recomendação transversal é alocar esforço onde há tração institucional verificável (LCW, Blockcerts e as referências EBSI/OpenCerts, no campo educacional; Guardian e Regen, como parâmetros de maturidade) e tratar o restante da lista como acervo arquitetural e pedagógico, não como portfólio de adoção.
+REFERÊNCIAS
+ABBAS, Syed Raza; ABBAS, Zeeshan; REHMAN, Mobeen Ur; LEE, Seung Won. Blockchain for smart healthcare: a systematic review of security, interoperability, and AI–IoT integration. DIGITAL HEALTH, [S. l.], v. 12, 2026. Disponível em: https://journals.sagepub.com/doi/10.1177/20552076261420985. Acesso em: 9 jul. 2026.
+ARXIV. arXiv API user's manual. Ithaca: Cornell University, 2026. Disponível em: https://info.arxiv.org/help/api/user-manual.html. Acesso em: 9 jul. 2026.
+BCDIPLOMA. Verifiable credentials on the blockchain: fr.EBSI project explained. [S. l.], 2024. Disponível em: https://www.bcdiploma.com/en/blog/ebsi-verifiable-credentials. Acesso em: 9 jul. 2026.
+BRYANT, Meg. Blockchain may be healthcare's answer to interoperability, data security. Healthcare Dive, [S. l.], 2016. Disponível em: https://www.healthcaredive.com/news/blockchain-may-be-healthcares-answer-to-interoperability-data-security/418708/. Acesso em: 9 jul. 2026.
+ELANGOVAN, Deepa; LONG, Chiau Soon; BAKRIN, Faizah Safina; TAN, Ching Siang; GOH, Khang Wen; YEOH, Siang Fei; LOY, Mei Jun; HUSSAIN, Zahid; LEE, Kah Seng; IDRIS, Azam Che; MING, Long Chiau. The use of blockchain technology in the health care sector: systematic review. JMIR Medical Informatics, [S. l.], v. 10, n. 1, 2022. Disponível em: https://medinform.jmir.org/2022/1/e17278/. Acesso em: 9 jul. 2026.
+EL KOSHIRY, Amr; ELIWA, Entesar; ABD EL-HAFEEZ, Tarek; SHAMS, Mahmoud Y. Unlocking the power of blockchain in education: an overview of innovations and outcomes. Blockchain: Research and Applications, [S. l.]: Elsevier, 2023. Disponível em: https://www.sciencedirect.com/science/article/pii/S2096720923000404. Acesso em: 9 jul. 2026.
+EUROPEAN DATA PROTECTION BOARD. Guidelines 02/2025 on processing of personal data through blockchain technologies. Bruxelas: EDPB, 2025. Disponível em: https://www.edpb.europa.eu/system/files/2025-04/edpb_guidelines_202502_blockchain_en.pdf. Acesso em: 9 jul. 2026.
+GOVINDARAJAN, Usharani Hareesh; NARANG, Gagan; SINGH, Dhiraj Kumar; YADAV, Vinay Surendra. Blockchain technologies adoption in healthcare: overcoming barriers amid the hype cycle to enhance patient care. Technological Forecasting and Social Change, [S. l.]: Elsevier, v. 213, 2025. Disponível em: https://ideas.repec.org/a/eee/tefoso/v213y2025ics0040162525000629.html. Acesso em: 9 jul. 2026.
+HASHGRAPH. Hedera Guardian 2026: the next chapter. [S. l.], 2026. Disponível em: https://hashgraph.com/blog/hedera-guardian-2026-the-next-chapter/. Acesso em: 9 jul. 2026.
+HIGUERA, Alex. DCC transfers stewardship of Learner Credential Wallet to the OpenWallet Foundation. MIT Open Learning, Cambridge, 2025. Disponível em: https://openlearning.mit.edu/news/dcc-transfers-stewardship-learner-credential-wallet-openwallet-foundation. Acesso em: 9 jul. 2026.
+McGREAL, Rory. Blockchain and micro-credentials. International Journal of E-Learning & Distance Education, [S. l.], 2023. Disponível em: https://www.ijede.ca/index.php/jde/article/view/1250/1885. Acesso em: 9 jul. 2026.
+PARMENTOLA, Adele; PETRILLO, Antonella; TUTORE, Ilaria; DE FELICE, Fabio. Is blockchain able to enhance environmental sustainability? A systematic review and research agenda from the perspective of Sustainable Development Goals (SDGs). Business Strategy and the Environment, [S. l.]: Wiley, v. 31, n. 6, 2022. Disponível em: https://onlinelibrary.wiley.com/doi/full/10.1002/bse.2882. Acesso em: 9 jul. 2026.
+SCIENCEDIRECT. A bibliometric review of blockchain in climate action. [S. l.]: Elsevier, 2025. Disponível em: https://www.sciencedirect.com/science/article/pii/S2949736125000703. Acesso em: 9 jul. 2026.
+SHAIKH, Mutiullah; MEMON, Shafique Ahmed; EBRAHIMI, Ali; WIIL, Uffe Kock. A systematic literature review for blockchain-based healthcare implementations. Healthcare, Basel: MDPI, v. 13, n. 9, 2025. Disponível em: https://www.mdpi.com/2227-9032/13/9/1087. Acesso em: 9 jul. 2026.
+STEIU, Mara-Florina. Blockchain in education: opportunities, applications, and challenges. First Monday, [S. l.], v. 25, n. 9, 2020. Disponível em: https://firstmonday.org/ojs/index.php/fm/article/view/10654. Acesso em: 9 jul. 2026.
+SULEYMAN, Mustafa; LAURIE, Ben. Trust, confidence and verifiable data audit. DeepMind, Londres, 2017. Disponível em: https://deepmind.com/blog/trust-confidence-verifiable-data-audit/. Acesso em: 9 jul. 2026.
+TOUCAN. Blockchain for scaling climate action. [S. l.], 2023. Disponível em: https://blog.toucan.earth/wef-blockchains-for-climate-action/. Acesso em: 9 jul. 2026.
+VACCARGIU, Matteo; TONELLI, Roberto. Blockchain projects in environmental sector: theoretical and practical analysis. Earth, Basel: MDPI, v. 5, n. 3, 2024. Disponível em: https://www.mdpi.com/2673-4834/5/3/20. Acesso em: 9 jul. 2026.
+VERRA. Verra addresses crypto instruments and tokens. Washington, 2022. Disponível em: https://verra.org/verra-addresses-crypto-instruments-and-tokens/. Acesso em: 9 jul. 2026.
+VERRA. Verra and Hedera to accelerate digital transformation of carbon markets. Washington, 2025. Disponível em: https://verra.org/verra-and-hedera-to-accelerate-digital-transformation-of-carbon-markets/. Acesso em: 9 jul. 2026.
+W3C. Verifiable credentials data model v2.0. [S. l.]: W3C, 2025. Disponível em: https://www.w3.org/TR/vc-data-model-2.0/. Acesso em: 9 jul. 2026.
+X DEVELOPER PLATFORM. Recent search quickstart. [S. l.], 2026. Disponível em: https://docs.x.com/x-api/posts/search/quickstart/recent-search. Acesso em: 9 jul. 2026.
